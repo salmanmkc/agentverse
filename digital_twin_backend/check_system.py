@@ -96,9 +96,9 @@ class SystemHealthChecker:
     async def check_core_imports(self) -> dict:
         """Check core system imports"""
         imports = {
-            "config.settings": "Configuration system",
-            "communication.shared_knowledge": "Shared knowledge base",
-            "communication.protocol": "Communication protocol"
+            "digital_twin_backend.config.settings": "Configuration system",
+            "digital_twin_backend.communication.shared_knowledge": "Shared knowledge base",
+            "digital_twin_backend.communication.protocol": "Communication protocol"
         }
         
         results = {}
@@ -118,7 +118,7 @@ class SystemHealthChecker:
         
         try:
             # Test shared knowledge
-            from communication.shared_knowledge import SharedKnowledgeBase
+            from digital_twin_backend.communication.shared_knowledge import SharedKnowledgeBase
             shared_knowledge = SharedKnowledgeBase()
             await shared_knowledge.initialize()
             results["shared_knowledge"] = {"status": "✅", "description": "Shared knowledge initialization"}
@@ -128,8 +128,8 @@ class SystemHealthChecker:
         
         try:
             # Test communication protocol
-            from communication.shared_knowledge import SharedKnowledgeBase
-            from communication.protocol import AgentCommunicationProtocol
+            from digital_twin_backend.communication.shared_knowledge import SharedKnowledgeBase
+            from digital_twin_backend.communication.protocol import AgentCommunicationProtocol
             
             shared_knowledge = SharedKnowledgeBase()
             await shared_knowledge.initialize()

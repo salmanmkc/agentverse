@@ -15,12 +15,14 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Ensure we can import local modules
-sys.path.insert(0, str(Path(__file__).parent))
+# Ensure project root is available for imports
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from scraping.scraper import create_consent, ConsentManager
-from finetuning import FineTuningOrchestrator
-from config.settings import AGENT_CONFIGS, AgentConfig
+from digital_twin_backend.scraping.scraper import create_consent, ConsentManager
+from digital_twin_backend.finetuning import FineTuningOrchestrator
+from digital_twin_backend.config.settings import AGENT_CONFIGS, AgentConfig
 
 
 class ModularTrainingPipeline:

@@ -30,9 +30,9 @@ except ImportError as e:
     torch = None
     ML_AVAILABLE = False
 
-from scraping.scraper import ScrapedMessage, scrape_person_data, create_consent
-from config.settings import settings, AGENT_CONFIGS, AgentConfig
-from communication.shared_knowledge import AgentCapabilities
+from digital_twin_backend.scraping.scraper import ScrapedMessage, scrape_person_data, create_consent
+from digital_twin_backend.config.settings import settings, AGENT_CONFIGS, AgentConfig
+from digital_twin_backend.communication.shared_knowledge import AgentCapabilities
 
 
 class FineTuningOrchestrator:

@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
 
-from communication.shared_knowledge import (
+from digital_twin_backend.communication.shared_knowledge import (
     SharedKnowledgeBase, 
     TaskInfo, 
     AgentContext,
@@ -19,10 +19,10 @@ from communication.shared_knowledge import (
     TaskStatus,
     AgentStatus
 )
-from communication.protocol import AgentCommunicationProtocol, MessageType, MessagePriority
-from agents.manager_agent import ManagerAgent
-from agents.worker_agent import WorkerAgent
-from config.settings import settings, AGENT_CONFIGS
+from digital_twin_backend.communication.protocol import AgentCommunicationProtocol, MessageType, MessagePriority
+from digital_twin_backend.agents.manager_agent import ManagerAgent
+from digital_twin_backend.agents.worker_agent import WorkerAgent
+from digital_twin_backend.config.settings import settings, AGENT_CONFIGS
 
 
 # Pydantic models for API requests/responses
@@ -175,10 +175,7 @@ class FrontendIntegrationAPI:
                 agent_config = AGENT_CONFIGS.get(agent_id)
                 if agent_config:
                     worker_capabilities = AgentCapabilities(
-                        technical_skills=agent_config.capabilities,
-                        preferred_task_types=[],
-                        work_style={},
-                        communication_style={}
+                        technical_skills=agent_config.capabilities
                     )
                     worker = WorkerAgent(
                         agent_id=agent_id,

@@ -20,7 +20,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-from config.settings import settings
+from digital_twin_backend.config.settings import settings
 
 
 @dataclass

@@ -7,8 +7,8 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 import json
 
-from agents.base_agent import DigitalTwinAgent, TaskAssessment, AgentResponse
-from communication.shared_knowledge import (
+from digital_twin_backend.agents.base_agent import DigitalTwinAgent, TaskAssessment, AgentResponse
+from digital_twin_backend.communication.shared_knowledge import (
     SharedKnowledgeBase, 
     TaskInfo, 
     NegotiationMessage,
@@ -489,7 +489,7 @@ Keep it professional but friendly.
             self.context.max_capacity = max_capacity
         
         # Update availability status
-        from communication.shared_knowledge import AgentStatus
+        from digital_twin_backend.communication.shared_knowledge import AgentStatus
         
         if new_status in [status.value for status in AgentStatus]:
             self.context.availability_status = AgentStatus(new_status)
