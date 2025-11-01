@@ -5,52 +5,48 @@ import os
 from typing import Dict, List, Optional
 from datetime import datetime
 from dataclasses import dataclass, field
-from pydantic_settings import BaseSettings
-from pydantic import Field
+import os
 
 
-class Settings(BaseSettings):
+class Settings:
     """Application settings"""
     
-    # Application
-    APP_NAME: str = "Digital Twin Workplace"
-    DEBUG: bool = Field(default=False, env="DEBUG")
-    
-    # API Settings
-    API_HOST: str = Field(default="localhost", env="API_HOST")
-    API_PORT: int = Field(default=8000, env="API_PORT")
-    
-    # Database
-    DATABASE_URL: str = Field(default="sqlite:///./digital_twins.db", env="DATABASE_URL")
-    REDIS_URL: str = Field(default="redis://localhost:6379", env="REDIS_URL")
-    
-    # Model Settings
-    BASE_MODEL_NAME: str = Field(default="microsoft/DialoGPT-medium", env="BASE_MODEL_NAME")
-    MODELS_DIR: str = Field(default="./models", env="MODELS_DIR")
-    MAX_CONTEXT_LENGTH: int = Field(default=1024, env="MAX_CONTEXT_LENGTH")
-    
-    # Agent Settings
-    MANAGER_AGENT_ID: str = "manager"
-    WORKER_AGENT_IDS: List[str] = ["agent_1", "agent_2", "agent_3", "agent_4", "agent_5"]
-    MAX_NEGOTIATION_ROUNDS: int = 3
-    TASK_TIMEOUT_MINUTES: int = 30
-    
-    # Scraping Settings
-    SCRAPING_ENABLED: bool = Field(default=False, env="SCRAPING_ENABLED")
-    SELENIUM_HEADLESS: bool = Field(default=True, env="SELENIUM_HEADLESS")
-    SELENIUM_TIMEOUT: int = 30
-    
-    # Frontend Integration
-    FRONTEND_API_URL: str = Field(default="http://localhost:3000", env="FRONTEND_API_URL")
-    WEBHOOK_SECRET: str = Field(default="your-webhook-secret", env="WEBHOOK_SECRET")
-    
-    # Logging
-    LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
-    LOG_FILE: str = Field(default="digital_twins.log", env="LOG_FILE")
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    def __init__(self):
+        # Application
+        self.APP_NAME = "Digital Twin Workplace"
+        self.DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+        
+        # API Settings
+        self.API_HOST = os.getenv("API_HOST", "localhost")
+        self.API_PORT = int(os.getenv("API_PORT", "8000"))
+        
+        # Database
+        self.DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./digital_twins.db")
+        self.REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+        
+        # Model Settings
+        self.BASE_MODEL_NAME = os.getenv("BASE_MODEL_NAME", "microsoft/DialoGPT-medium")
+        self.MODELS_DIR = os.getenv("MODELS_DIR", "./models")
+        self.MAX_CONTEXT_LENGTH = int(os.getenv("MAX_CONTEXT_LENGTH", "1024"))
+        
+        # Agent Settings
+        self.MANAGER_AGENT_ID = "manager"
+        self.WORKER_AGENT_IDS = ["agent_1", "agent_2", "agent_3", "agent_4", "agent_5"]
+        self.MAX_NEGOTIATION_ROUNDS = 3
+        self.TASK_TIMEOUT_MINUTES = 30
+        
+        # Scraping Settings
+        self.SCRAPING_ENABLED = os.getenv("SCRAPING_ENABLED", "False").lower() == "true"
+        self.SELENIUM_HEADLESS = os.getenv("SELENIUM_HEADLESS", "True").lower() == "true"
+        self.SELENIUM_TIMEOUT = 30
+        
+        # Frontend Integration
+        self.FRONTEND_API_URL = os.getenv("FRONTEND_API_URL", "http://localhost:3000")
+        self.WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "your-webhook-secret")
+        
+        # Logging
+        self.LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+        self.LOG_FILE = os.getenv("LOG_FILE", "digital_twins.log")
 
 
 class AgentConfig:
@@ -128,7 +124,59 @@ AGENT_CONFIGS = {
     "manager": AgentConfig("manager", "Manager", {"leadership": 0.9, "coordination": 0.95}),
     "agent_1": AgentConfig("agent_1", "Eddie Lake", {"technical": 0.8, "documentation": 0.9}),
     "agent_2": AgentConfig("agent_2", "Jamik Tashpulatov", {"technical": 0.95, "architecture": 0.9}),
-    "agent_3": AgentConfig("agent_3", "Agent_3", {"creative": 0.8, "frontend": 0.7}),
-    "agent_4": AgentConfig("agent_4", "Agent_4", {"backend": 0.9, "database": 0.8}),
-    "agent_5": AgentConfig("agent_5", "Agent_5", {"qa": 0.85, "testing": 0.9}),
+    "agent_3": AgentConfig("agent_3", "Sarah Johnson", {"creative": 0.8, "frontend": 0.7}),
+    "agent_4": AgentConfig("agent_4", "Mike Chen", {"backend": 0.9, "database": 0.8}),
+    "agent_5": AgentConfig("agent_5", "Lisa Wong", {"qa": 0.85, "testing": 0.9}),
+}
+
+# Enhanced training configurations with social media accounts
+# This integrates with the agent_training_config.json file
+PERSON_TRAINING_CONFIGS = {
+    "agent_1": PersonTrainingConfig(
+        person_name="Eddie Lake",
+        email="eddie.lake@company.com",
+        agent_id="agent_1",
+        whatsapp_phone="+44-7700-900123",
+        linkedin_profile="eddie-lake-dev",
+        twitter_username="@eddieLakeDev",
+        platforms_to_scrape=["whatsapp", "linkedin"],
+        training_priority=1
+    ),
+    "agent_2": PersonTrainingConfig(
+        person_name="Jamik Tashpulatov",
+        email="jamik.t@company.com",
+        agent_id="agent_2",
+        whatsapp_phone="+44-7700-900456",
+        linkedin_profile="jamik-tashpulatov",
+        twitter_username="@jamikT_dev",
+        platforms_to_scrape=["whatsapp", "linkedin", "twitter"],
+        training_priority=1
+    ),
+    "agent_3": PersonTrainingConfig(
+        person_name="Sarah Johnson",
+        email="sarah.j@company.com",
+        agent_id="agent_3",
+        linkedin_profile="sarah-johnson-design",
+        twitter_username="@sarahDesigns",
+        platforms_to_scrape=["linkedin", "twitter"],
+        training_priority=2
+    ),
+    "agent_4": PersonTrainingConfig(
+        person_name="Mike Chen",
+        email="mike.c@company.com",
+        agent_id="agent_4",
+        whatsapp_phone="+44-7700-900321",
+        linkedin_profile="mike-chen-backend",
+        platforms_to_scrape=["whatsapp", "linkedin"],
+        training_priority=2
+    ),
+    "agent_5": PersonTrainingConfig(
+        person_name="Lisa Wong",
+        email="lisa.w@company.com",
+        agent_id="agent_5",
+        whatsapp_phone="+44-7700-900654",
+        linkedin_profile="lisa-wong-qa",
+        platforms_to_scrape=["whatsapp", "linkedin"],
+        training_priority=3
+    )
 }
