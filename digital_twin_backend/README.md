@@ -47,68 +47,90 @@ API_PORT=8000
 DATABASE_URL=sqlite:///./digital_twins.db
 REDIS_URL=redis://localhost:6379
 BASE_MODEL_NAME=microsoft/DialoGPT-medium
-SCRAPING_ENABLED=False
+SCRAPING_ENABLED=True
+SELENIUM_HEADLESS=False
 ```
 
-### 3. Start the System
+### 3. Configure Your Team
+
+Edit `agent_training_config.json` with your team's real social media accounts:
+
+```json
+{
+  "agents": {
+    "agent_1": {
+      "person_name": "Your Teammate 1",
+      "email": "teammate1@company.com",
+      "social_accounts": {
+        "linkedin_profile_url": "https://linkedin.com/in/teammate1",
+        "whatsapp_phone": "+44-7xxx-xxxxxx"
+      },
+      "scraping_config": {
+        "platforms": ["whatsapp", "linkedin"],
+        "max_messages_per_platform": 500
+      }
+    }
+  }
+}
+```
+
+### 4. Run Complete Pipeline
 
 ```bash
-# Start the API server
+# Test the system first
+python test_pipeline.py
+
+# Run complete training and deployment
+python deploy_agents.py run
+
+# Or run step by step:
+python train_pipeline.py create-consents
+python train_pipeline.py scrape-all
+python train_pipeline.py train-all
+```
+
+### 5. Start the System
+
+```bash
+# Start the API server with trained agents
 python main.py
-
-# Or initialize manually in Python
-python -c "
-from main import create_app
-import asyncio
-
-async def run():
-    app = await create_app()
-    # System is ready for API calls
-    print('System initialized!')
-
-asyncio.run(run())
-"
 ```
 
-### 4. Initialize Agents
+## 🧠 Training Pipeline Options
+
+### Complete Pipeline (Recommended for Hackathon)
 
 ```bash
-# Make API call to initialize the agent system
-curl -X POST http://localhost:8000/api/initialize
+# Run everything: scrape → train → deploy
+python deploy_agents.py run
+
+# Check pipeline status
+python deploy_agents.py status
+
+# Deploy already trained models
+python deploy_agents.py deploy
 ```
 
-## 🧠 Fine-tuning Process
-
-### Step 1: Setup Data Collection
+### Modular Pipeline (For Development)
 
 ```bash
-# Create consent and scrape social media data
-python finetuning.py setup "John Smith" "john@company.com" whatsapp linkedin
+# Step-by-step training
+python train_pipeline.py create-consents    # Setup consent records
+python train_pipeline.py scrape-all         # Scrape social media data  
+python train_pipeline.py train-all          # Train all models
+python train_pipeline.py status             # Check training status
 
-# This will:
-# - Create consent record with token
-# - Scrape WhatsApp Web and LinkedIn messages (with user consent)
-# - Process data for training
-# - Analyze communication patterns
+# Individual agent training
+python train_pipeline.py scrape agent_1     # Scrape specific agent
+python train_pipeline.py train agent_1      # Train specific agent
 ```
 
-### Step 2: Train Individual Agent
+### Legacy Fine-tuning (Manual)
 
 ```bash
-# Train a specific person's digital twin
-python finetuning.py train "John Smith" agent_1
-
-# This will:
-# - Load training data
-# - Fine-tune base LLM with LoRA
-# - Save personalized model
-# - Update agent configuration
-```
-
-### Step 3: Train All Agents
-
-```bash
-# Batch train all configured agents
+# Manual setup for individual agents
+python finetuning.py setup "Eddie Lake" "eddie@company.com" whatsapp linkedin
+python finetuning.py train "Eddie Lake" agent_1
 python finetuning.py train_all
 ```
 

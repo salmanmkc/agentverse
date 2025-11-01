@@ -26,6 +26,7 @@ sqlite3  # Built-in
 
 # Utilities
 pydantic>=2.4.0
+pydantic-settings>=2.0.0
 python-multipart>=0.0.6
 python-json-logger>=2.0.7
 asyncio-mqtt>=0.13.0
