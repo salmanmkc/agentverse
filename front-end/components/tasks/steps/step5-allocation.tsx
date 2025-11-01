@@ -18,7 +18,7 @@ interface Step5AllocationProps {
 
 export function Step5Allocation({ state, updateState }: Step5AllocationProps) {
   const [createGitHubIssues, setCreateGitHubIssues] = useState(true)
-  const [repository, setRepository] = useState("example/repo")
+  const [repository, setRepository] = useState("")
   const [projectBoard, setProjectBoard] = useState("")
   const [sendNotifications, setSendNotifications] = useState(true)
 
@@ -145,7 +145,7 @@ export function Step5Allocation({ state, updateState }: Step5AllocationProps) {
                 <Label htmlFor="repository">Repository</Label>
                 <Input
                   id="repository"
-                  placeholder="owner/repo"
+                  placeholder="https://github.com/salmanmkc/agentverse"
                   value={repository}
                   onChange={(e) => setRepository(e.target.value)}
                 />
