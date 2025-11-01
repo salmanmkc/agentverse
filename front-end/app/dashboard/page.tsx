@@ -5,6 +5,7 @@ import { ChartAreaInteractive } from "@/components/chart-area-interactive"
 import { DataTable } from "@/components/data-table"
 import { SectionCards } from "@/components/section-cards"
 import { SiteHeader } from "@/components/site-header"
+import Plan from "@/components/ui/agent-plan"
 import {
   SidebarInset,
   SidebarProvider,
@@ -57,6 +58,7 @@ export default function Page() {
   const [status, setStatus] = useState<
     "submitted" | "streaming" | "ready" | "error"
   >("ready")
+  const [showPlan, setShowPlan] = useState<boolean>(false)
 
   const handleSubmit = (message: PromptInputMessage) => {
     const hasText = Boolean(message.text)
@@ -78,6 +80,9 @@ export default function Page() {
     toast.success("Command sent", {
       description: message.text || "Processing attachments",
     })
+
+    // Show the agent plan after submission
+    setShowPlan(true)
 
     setText("")
     setStatus("ready")
@@ -156,6 +161,18 @@ export default function Page() {
                 </PromptInputFooter>
               </PromptInput>
             </div>
+            {showPlan && (
+              <div className="px-4 lg:px-6">
+                <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+                  <div className="p-6">
+                    <h2 className="text-2xl font-semibold mb-4">Agent Plan</h2>
+                    <div className="h-[400px]">
+                      <Plan />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <SectionCards />
             <div className="px-4 lg:px-6">
               <ChartAreaInteractive />
