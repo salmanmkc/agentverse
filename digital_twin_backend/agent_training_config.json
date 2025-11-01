@@ -1,0 +1,168 @@
+{
+  "training_pipeline": {
+    "base_model": "microsoft/DialoGPT-medium",
+    "max_training_time_minutes": 30,
+    "auto_deploy_after_training": true,
+    "use_lora": true,
+    "lora_rank": 8,
+    "lora_alpha": 32
+  },
+  "scraping_settings": {
+    "selenium_headless": false,
+    "selenium_timeout": 30,
+    "delay_between_platforms": 5,
+    "max_scroll_attempts": 5
+  },
+  "agents": {
+    "agent_1": {
+      "person_name": "Eddie Lake",
+      "email": "eddie.lake@company.com",
+      "social_accounts": {
+        "whatsapp_phone": "+44-7700-900123",
+        "linkedin_profile_url": "https://linkedin.com/in/eddie-lake-dev",
+        "linkedin_username": "eddie-lake-dev",
+        "twitter_profile_url": "https://twitter.com/eddieLakeDev",
+        "twitter_username": "eddieLakeDev"
+      },
+      "scraping_config": {
+        "platforms": ["whatsapp", "linkedin"],
+        "max_messages_per_platform": 500,
+        "scrape_priority": 1,
+        "skip_non_text": true,
+        "min_message_length": 10
+      },
+      "training_config": {
+        "training_epochs": 3,
+        "learning_rate": 5e-4,
+        "batch_size": 4,
+        "gradient_accumulation_steps": 2,
+        "warmup_steps": 100
+      },
+      "agent_role": {
+        "primary_skills": ["technical", "documentation"],
+        "task_preferences": ["Technical content", "API Documentation", "Code Review"],
+        "communication_style": "collaborative_technical"
+      }
+    },
+    "agent_2": {
+      "person_name": "Jamik Tashpulatov", 
+      "email": "jamik.t@company.com",
+      "social_accounts": {
+        "whatsapp_phone": "+44-7700-900456",
+        "linkedin_profile_url": "https://linkedin.com/in/jamik-tashpulatov",
+        "linkedin_username": "jamik-tashpulatov",
+        "twitter_profile_url": "https://twitter.com/jamikT_dev",
+        "twitter_username": "jamikT_dev"
+      },
+      "scraping_config": {
+        "platforms": ["whatsapp", "linkedin", "twitter"],
+        "max_messages_per_platform": 800,
+        "scrape_priority": 1,
+        "skip_non_text": true,
+        "min_message_length": 10
+      },
+      "training_config": {
+        "training_epochs": 3,
+        "learning_rate": 5e-4,
+        "batch_size": 4,
+        "gradient_accumulation_steps": 2,
+        "warmup_steps": 100
+      },
+      "agent_role": {
+        "primary_skills": ["technical", "architecture", "leadership"],
+        "task_preferences": ["System Architecture", "Technical Strategy", "Team Coordination"],
+        "communication_style": "strategic_technical"
+      }
+    },
+    "agent_3": {
+      "person_name": "Sarah Johnson",
+      "email": "sarah.j@company.com",
+      "social_accounts": {
+        "whatsapp_phone": "+44-7700-900789",
+        "linkedin_profile_url": "https://linkedin.com/in/sarah-johnson-design",
+        "linkedin_username": "sarah-johnson-design",
+        "twitter_profile_url": "https://twitter.com/sarahDesigns",
+        "twitter_username": "sarahDesigns"
+      },
+      "scraping_config": {
+        "platforms": ["linkedin", "twitter"],
+        "max_messages_per_platform": 400,
+        "scrape_priority": 2,
+        "skip_non_text": true,
+        "min_message_length": 10
+      },
+      "training_config": {
+        "training_epochs": 3,
+        "learning_rate": 5e-4,
+        "batch_size": 4,
+        "gradient_accumulation_steps": 2,
+        "warmup_steps": 100
+      },
+      "agent_role": {
+        "primary_skills": ["creative", "design", "frontend"],
+        "task_preferences": ["Visual Design", "UI/UX", "Creative Content"],
+        "communication_style": "creative_collaborative"
+      }
+    },
+    "agent_4": {
+      "person_name": "Mike Chen",
+      "email": "mike.c@company.com", 
+      "social_accounts": {
+        "whatsapp_phone": "+44-7700-900321",
+        "linkedin_profile_url": "https://linkedin.com/in/mike-chen-backend",
+        "linkedin_username": "mike-chen-backend",
+        "twitter_profile_url": "https://twitter.com/mikeChenDev",
+        "twitter_username": "mikeChenDev"
+      },
+      "scraping_config": {
+        "platforms": ["whatsapp", "linkedin"],
+        "max_messages_per_platform": 600,
+        "scrape_priority": 2,
+        "skip_non_text": true,
+        "min_message_length": 10
+      },
+      "training_config": {
+        "training_epochs": 3,
+        "learning_rate": 5e-4,
+        "batch_size": 4,
+        "gradient_accumulation_steps": 2,
+        "warmup_steps": 100
+      },
+      "agent_role": {
+        "primary_skills": ["backend", "database", "infrastructure"],
+        "task_preferences": ["Backend Development", "Database Design", "Infrastructure"],
+        "communication_style": "technical_pragmatic"
+      }
+    },
+    "agent_5": {
+      "person_name": "Lisa Wong",
+      "email": "lisa.w@company.com",
+      "social_accounts": {
+        "whatsapp_phone": "+44-7700-900654",
+        "linkedin_profile_url": "https://linkedin.com/in/lisa-wong-qa",
+        "linkedin_username": "lisa-wong-qa",
+        "twitter_profile_url": "https://twitter.com/lisaQA_tech",
+        "twitter_username": "lisaQA_tech"
+      },
+      "scraping_config": {
+        "platforms": ["whatsapp", "linkedin"],
+        "max_messages_per_platform": 450,
+        "scrape_priority": 3,
+        "skip_non_text": true,
+        "min_message_length": 10
+      },
+      "training_config": {
+        "training_epochs": 3,
+        "learning_rate": 5e-4,
+        "batch_size": 4,
+        "gradient_accumulation_steps": 2,
+        "warmup_steps": 100
+      },
+      "agent_role": {
+        "primary_skills": ["qa", "testing", "quality"],
+        "task_preferences": ["Quality Assurance", "Testing", "Bug Analysis"],
+        "communication_style": "detail_oriented_systematic"
+      }
+    }
+  }
+}
