@@ -24,8 +24,8 @@ try:
     from scraping.scraper import SocialMediaScraper, create_consent, ConsentManager
     from finetuning import FineTuningOrchestrator
     from config.settings import settings, AGENT_CONFIGS
-    from communication.shared_knowledge import shared_knowledge, AgentCapabilities
-    from communication.protocol import communication_protocol
+    from communication.shared_knowledge import SharedKnowledgeBase, AgentCapabilities
+    from communication.protocol import AgentCommunicationProtocol
     from agents.manager_agent import ManagerAgent
     from agents.worker_agent import WorkerAgent
 except ImportError as e:
@@ -357,10 +357,11 @@ class CompleteAgentPipeline:
         try:
             # Initialize core systems
             logger.info("🔄 Initializing shared knowledge system...")
+            shared_knowledge = SharedKnowledgeBase()
             await shared_knowledge.initialize()
             
             logger.info("🔄 Initializing communication protocol...")
-            communication_protocol.shared_knowledge = shared_knowledge  
+            communication_protocol = AgentCommunicationProtocol(shared_knowledge)
             await communication_protocol.initialize()
             
         except Exception as e:
@@ -406,21 +407,33 @@ class CompleteAgentPipeline:
                 model_path = self.pipeline_status["agents_status"][agent_id]["model_path"]
                 agent_role = agent_config["agent_role"]
                 
-                # Create capabilities from config
-                capabilities = AgentCapabilities(
-                    technical_skills={
-                        skill: 0.8 for skill in agent_role["primary_skills"]
-                    },
-                    preferred_task_types=agent_role["task_preferences"],
-                    work_style={
-                        "collaborative": "collaborative" in agent_role["communication_style"],
-                        "technical": "technical" in agent_role["communication_style"],
-                        "creative": "creative" in agent_role["communication_style"]
-                    },
-                    communication_style={
-                        "style": agent_role["communication_style"]
-                    }
-                )
+                # Use analyzed capabilities from training if available, otherwise use config
+                agent_status = self.pipeline_status["agents_status"][agent_id]
+                if "training_analyzed_capabilities" in agent_status:
+                    # Use capabilities from communication pattern analysis
+                    analyzed_caps = agent_status["training_analyzed_capabilities"]
+                    capabilities = AgentCapabilities(
+                        technical_skills=analyzed_caps.get("technical_skills", {}),
+                        preferred_task_types=analyzed_caps.get("preferred_task_types", []),
+                        work_style=analyzed_caps.get("work_style", {}),
+                        communication_style=analyzed_caps.get("communication_style", {})
+                    )
+                else:
+                    # Fallback to config-based capabilities
+                    capabilities = AgentCapabilities(
+                        technical_skills={
+                            skill: 0.8 for skill in agent_role["primary_skills"]
+                        },
+                        preferred_task_types=agent_role["task_preferences"],
+                        work_style={
+                            "collaborative": "collaborative" in agent_role["communication_style"],
+                            "technical": "technical" in agent_role["communication_style"],
+                            "creative": "creative" in agent_role["communication_style"]
+                        },
+                        communication_style={
+                            "style": agent_role["communication_style"]
+                        }
+                    )
                 
                 # Create worker agent
                 worker = WorkerAgent(

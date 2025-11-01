@@ -9,8 +9,15 @@ from typing import Dict, List, Any, Optional, Callable, Set
 from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict
 from enum import Enum
-import redis.asyncio as redis
 from concurrent.futures import ThreadPoolExecutor
+
+# Optional Redis import
+try:
+    import redis.asyncio as redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    redis = None
+    REDIS_AVAILABLE = False
 
 from communication.shared_knowledge import (
     SharedKnowledgeBase, 
@@ -116,27 +123,27 @@ class AgentCommunicationProtocol:
     
     async def initialize(self) -> None:
         """Initialize the communication protocol"""
-        try:
-            # Connect to Redis for message persistence and pub/sub
-            self.redis_client = redis.from_url(self.redis_url, decode_responses=True)
-            await self.redis_client.ping()
-            print("✅ Communication protocol connected to Redis")
-            
-            # Start background tasks
-            self.is_running = True
-            self.message_router_task = asyncio.create_task(self._message_router())
-            self.cleanup_task = asyncio.create_task(self._cleanup_expired_messages())
-            
-            print("✅ Communication protocol initialized")
-            
-        except Exception as e:
-            print(f"⚠️  Redis connection failed: {e}")
-            print("📝 Using in-memory message routing (no persistence)")
+        if not REDIS_AVAILABLE:
+            print("⚠️  Redis not installed - using in-memory message routing")
+            print("💡 Install redis with: pip install redis")
             self.redis_client = None
-            
-            # Still start background tasks for in-memory routing
-            self.is_running = True
-            self.message_router_task = asyncio.create_task(self._message_router())
+        else:
+            try:
+                self.redis_client = redis.from_url(self.redis_url, decode_responses=True)
+                await self.redis_client.ping()
+                print("✅ Communication protocol connected to Redis")
+            except Exception as e:
+                print(f"⚠️  Redis connection failed: {e}")
+                print("📝 Using in-memory message routing (no persistence)")
+                print("💡 To enable persistence, start Redis server")
+                self.redis_client = None
+        
+        # Start background tasks regardless of Redis status
+        self.is_running = True
+        self.message_router_task = asyncio.create_task(self._message_router())
+        self.cleanup_task = asyncio.create_task(self._cleanup_expired_messages())
+        
+        print("✅ Communication protocol initialized")
     
     async def register_agent(self, agent_id: str, message_handler: Callable) -> None:
         """Register an agent with the communication protocol"""
@@ -583,5 +590,12 @@ class AgentCommunicationProtocol:
         print("✅ Communication protocol shutdown complete")
 
 
-# Global instance
-communication_protocol = AgentCommunicationProtocol(None)  # Will be initialized with shared_knowledge
+# Global instance - will be initialized properly in main application
+communication_protocol: Optional[AgentCommunicationProtocol] = None
+
+def get_communication_protocol(shared_knowledge) -> AgentCommunicationProtocol:
+    """Get the global communication protocol instance"""
+    global communication_protocol
+    if communication_protocol is None:
+        communication_protocol = AgentCommunicationProtocol(shared_knowledge)
+    return communication_protocol

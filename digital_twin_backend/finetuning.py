@@ -10,18 +10,25 @@ from datetime import datetime
 from pathlib import Path
 import shutil
 
-# ML/AI imports
-import torch
-from transformers import (
-    AutoTokenizer, 
-    AutoModelForCausalLM,
-    TrainingArguments,
-    Trainer,
-    DataCollatorForLanguageModeling
-)
-from datasets import Dataset
-from peft import LoraConfig, get_peft_model, TaskType
-import pandas as pd
+# ML/AI imports (optional)
+try:
+    import torch
+    from transformers import (
+        AutoTokenizer, 
+        AutoModelForCausalLM,
+        TrainingArguments,
+        Trainer,
+        DataCollatorForLanguageModeling
+    )
+    from datasets import Dataset
+    from peft import LoraConfig, get_peft_model, TaskType
+    import pandas as pd
+    ML_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  ML libraries not available: {e}")
+    print("💡 Install with: pip install torch transformers datasets peft pandas")
+    torch = None
+    ML_AVAILABLE = False
 
 from scraping.scraper import ScrapedMessage, scrape_person_data, create_consent
 from config.settings import settings, AGENT_CONFIGS, AgentConfig
@@ -86,12 +93,21 @@ class FineTuningOrchestrator:
             # Step 5: Create agent configuration
             agent_config = self._create_agent_config(person_name, capabilities)
             
+            # Save analyzed capabilities for later use in deployment
+            capabilities_dict = {
+                "technical_skills": capabilities.technical_skills,
+                "preferred_task_types": capabilities.preferred_task_types,
+                "work_style": capabilities.work_style,
+                "communication_style": capabilities.communication_style
+            }
+            
             return {
                 "person_name": person_name,
                 "consent_token": consent_token,
                 "scraped_data_file": scraped_data_file,
                 "training_samples": len(training_data) if training_data else 0,
-                "capabilities": capabilities.__dict__ if capabilities else {},
+                "capabilities": capabilities_dict,
+                "training_analyzed_capabilities": capabilities_dict,  # For deployment use
                 "agent_config": agent_config.to_dict(),
                 "ready_for_training": len(training_data) > 50 if training_data else False
             }
@@ -113,6 +129,14 @@ class FineTuningOrchestrator:
         """Fine-tune a model for a specific person"""
         
         print(f"🧠 Starting fine-tuning for {person_name}")
+        
+        if not ML_AVAILABLE:
+            return {
+                "person_name": person_name,
+                "status": "failed",
+                "error": "ML libraries not installed. Run: pip install torch transformers datasets peft",
+                "ready_for_deployment": False
+            }
         
         try:
             # Load training data
@@ -212,7 +236,7 @@ class FineTuningOrchestrator:
             trainer.save_model()
             tokenizer.save_pretrained(str(output_dir))
             
-            # Update agent configuration
+            # Update agent configuration only if training succeeded
             if agent_id:
                 AGENT_CONFIGS[agent_id].model_path = str(output_dir)
                 AGENT_CONFIGS[agent_id].fine_tuned = True

@@ -6,14 +6,16 @@ import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
-from communication.shared_knowledge import shared_knowledge
-from communication.protocol import communication_protocol
+from communication.shared_knowledge import SharedKnowledgeBase
+from communication.protocol import AgentCommunicationProtocol
 from integration.frontend_api import create_frontend_api
 from config.settings import settings
 
 
 # Global references
 app_instance = None
+shared_knowledge = None
+communication_protocol = None
 
 
 @asynccontextmanager
@@ -22,12 +24,15 @@ async def lifespan(app: FastAPI):
     
     print("🚀 Starting Digital Twin Backend System...")
     
+    global shared_knowledge, communication_protocol
+    
     try:
         # Initialize core systems
+        shared_knowledge = SharedKnowledgeBase()
         await shared_knowledge.initialize()
         
         # Initialize communication protocol with shared knowledge
-        communication_protocol.shared_knowledge = shared_knowledge
+        communication_protocol = AgentCommunicationProtocol(shared_knowledge)
         await communication_protocol.initialize()
         
         print("✅ Core systems initialized successfully")
@@ -37,9 +42,11 @@ async def lifespan(app: FastAPI):
     finally:
         print("🔄 Shutting down Digital Twin Backend System...")
         
-        # Cleanup
-        await communication_protocol.shutdown()
-        await shared_knowledge.close()
+        # Cleanup - check if instances exist before shutdown
+        if communication_protocol:
+            await communication_protocol.shutdown()
+        if shared_knowledge:
+            await shared_knowledge.close()
         
         print("✅ Shutdown complete")
 

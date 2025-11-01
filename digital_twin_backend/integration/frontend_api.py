@@ -15,6 +15,7 @@ from communication.shared_knowledge import (
     SharedKnowledgeBase, 
     TaskInfo, 
     AgentContext,
+    AgentCapabilities,
     TaskStatus,
     AgentStatus
 )
@@ -173,11 +174,17 @@ class FrontendIntegrationAPI:
             for agent_id in settings.WORKER_AGENT_IDS:
                 agent_config = AGENT_CONFIGS.get(agent_id)
                 if agent_config:
+                    worker_capabilities = AgentCapabilities(
+                        technical_skills=agent_config.capabilities,
+                        preferred_task_types=[],
+                        work_style={},
+                        communication_style={}
+                    )
                     worker = WorkerAgent(
                         agent_id=agent_id,
                         person_name=agent_config.person_name,
                         shared_knowledge=self.shared_knowledge,
-                        capabilities=agent_config.capabilities,
+                        capabilities=worker_capabilities,
                         model_path=agent_config.model_path if agent_config.fine_tuned else None
                     )
                     
@@ -214,10 +221,10 @@ class FrontendIntegrationAPI:
             raise HTTPException(status_code=503, detail="System not initialized")
         
         # Get task counts
-        all_tasks = await self.shared_knowledge.tasks
-        pending_tasks = len([t for t in all_tasks.values() if t.status == TaskStatus.PENDING])
-        in_progress_tasks = len([t for t in all_tasks.values() if t.status == TaskStatus.IN_PROGRESS])
-        completed_tasks = len([t for t in all_tasks.values() if t.status == TaskStatus.COMPLETED])
+        task_values = list(self.shared_knowledge.tasks.values())
+        pending_tasks = len([t for t in task_values if t.status == TaskStatus.PENDING])
+        in_progress_tasks = len([t for t in task_values if t.status == TaskStatus.IN_PROGRESS])
+        completed_tasks = len([t for t in task_values if t.status == TaskStatus.COMPLETED])
         
         # Get agent counts
         agent_contexts = await self.shared_knowledge.get_all_agent_contexts()
@@ -307,8 +314,7 @@ class FrontendIntegrationAPI:
         if not self.agents_initialized:
             raise HTTPException(status_code=503, detail="System not initialized")
         
-        all_tasks = await self.shared_knowledge.tasks
-        tasks = list(all_tasks.values())
+        tasks = list(self.shared_knowledge.tasks.values())
         
         if status:
             tasks = [t for t in tasks if t.status.value == status]
@@ -395,7 +401,7 @@ class FrontendIntegrationAPI:
             return {"message": "System not initialized", "data": []}
         
         # Get current tasks and convert to frontend format
-        all_tasks = await self.shared_knowledge.tasks
+        all_tasks = self.shared_knowledge.tasks
         dashboard_data = []
         
         for i, (task_id, task) in enumerate(all_tasks.items()):
@@ -509,8 +515,7 @@ class FrontendIntegrationAPI:
     async def _get_task_assignee(self, task_id: str) -> Optional[str]:
         """Get the agent assigned to a task"""
         
-        assignments = await self.shared_knowledge.task_assignments
-        return assignments.get(task_id)
+        return self.shared_knowledge.task_assignments.get(task_id)
     
     async def _update_frontend_task_assignment(self, task_id: str, assigned_agent: str) -> None:
         """Update task assignment in frontend-compatible format"""

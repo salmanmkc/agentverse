@@ -20,8 +20,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 try:
     from config.settings import settings, AGENT_CONFIGS
-    from communication.shared_knowledge import shared_knowledge, AgentCapabilities, TaskInfo, TaskStatus
-    from communication.protocol import communication_protocol
+    from communication.shared_knowledge import SharedKnowledgeBase, AgentCapabilities, TaskInfo, TaskStatus
+    from communication.protocol import AgentCommunicationProtocol
     from agents.manager_agent import ManagerAgent
     from agents.worker_agent import WorkerAgent
     from finetuning import FineTuningOrchestrator
@@ -65,6 +65,7 @@ class PipelineTestSuite:
         
         try:
             # Initialize shared knowledge
+            shared_knowledge = SharedKnowledgeBase()
             await shared_knowledge.initialize()
             
             # Test agent registration
@@ -115,8 +116,9 @@ class PipelineTestSuite:
         
         try:
             # Initialize systems
+            shared_knowledge = SharedKnowledgeBase()
             await shared_knowledge.initialize()
-            communication_protocol.shared_knowledge = shared_knowledge
+            communication_protocol = AgentCommunicationProtocol(shared_knowledge)
             await communication_protocol.initialize()
             
             # Test message sending
@@ -168,8 +170,9 @@ class PipelineTestSuite:
         
         try:
             # Initialize systems
+            shared_knowledge = SharedKnowledgeBase()
             await shared_knowledge.initialize()
-            communication_protocol.shared_knowledge = shared_knowledge
+            communication_protocol = AgentCommunicationProtocol(shared_knowledge)
             await communication_protocol.initialize()
             
             # Test manager agent
@@ -226,8 +229,9 @@ class PipelineTestSuite:
         
         try:
             # Initialize systems
+            shared_knowledge = SharedKnowledgeBase()
             await shared_knowledge.initialize()
-            communication_protocol.shared_knowledge = shared_knowledge
+            communication_protocol = AgentCommunicationProtocol(shared_knowledge)
             await communication_protocol.initialize()
             
             # Create manager and worker agents
