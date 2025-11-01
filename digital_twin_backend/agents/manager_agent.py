@@ -153,8 +153,9 @@ class ManagerAgent(DigitalTwinAgent):
             reverse=True
         )
         
-        # Store Phase 1 results
-        self.active_distributions[task.task_id]["phase1_responses"] = all_assessments
+        # Store Phase 1 results (initialize if needed)
+        if task.task_id in self.active_distributions:
+            self.active_distributions[task.task_id]["phase1_responses"] = all_assessments
         
         # Generate manager's analysis
         analysis = await self._generate_phase1_analysis(task, all_assessments, viable_candidates)
