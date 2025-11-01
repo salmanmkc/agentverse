@@ -1,0 +1,79 @@
+[project]
+name = "server"
+version = "0.1.0"
+description = "Server for the RAG agent that ingests documentation and entities for knowledge graph"
+authors = [
+    {name = "Rehan Agrawal", email = "rehagraw@cisco.com"},
+    {name = "Shubham Bakshi", email = "subbaksh@cisco.com"}
+]
+license = {text = "Apache-2.0"}
+readme = "README.md"
+requires-python = ">=3.13,<4.0"
+dependencies = [
+    "langchain>=0.1.0",
+    "langchain-core>=0.3.60",
+    "langchain-milvus>=0.1.10",
+    "langchain-openai>=0.3.18",
+    "openai>=1.0.0",
+    "beautifulsoup4>=4.12.3",
+    "httpx>=0.28.1",
+    "python-dotenv>=1.0.0",
+    "click>=8.1.7",
+    "a2a-sdk==0.2.16",
+    "pymilvus>=2.3.6",
+    "cnoe-agent-utils>=0.3.2",
+    "pydantic>=2.0.0",
+    "a2a>=0.0.1",
+    "aiohttp>=3.12.15",
+    "aiofile>=3.9.0",
+    "aiohttp>=3.12.15",
+    "beautifulsoup4>=4.12.3",
+    "cnoe-agent-utils>=0.1.4",
+    "fastapi[standard]>=0.116.1",
+    "httpx>=0.28.1",
+    "langchain>=0.1.0",
+    "langchain-community",
+    "langchain-core>=0.3.60",
+    "langchain-milvus>=0.2.1",
+    "langchain-openai>=0.3.18",
+    "lxml>=6.0.1",
+    "pydantic>=2.0.0",
+    "pymilvus>=2.6.0",
+    "python-dotenv>=1.0.0",
+    "redis>=5.0.0",
+    "uvicorn>=0.35.0",
+    "fastmcp>=2.12.4",
+    "common",
+]
+
+[project.scripts]
+run-server = "server.__main__:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "ruff>=0.4.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9.0"]
+build-backend = "uv_build"
+
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "ruff>=0.4.0",
+    "psutil>=7.0.0",
+    "memory-profiler>=0.61.0",
+    "aiofile>=3.9.0",
+]
+
+[tool.uv.sources]
+common = { path = "../common" }
