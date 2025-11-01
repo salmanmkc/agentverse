@@ -2,14 +2,20 @@
 Main application entry point for Digital Twin Backend System
 """
 import asyncio
+import sys
+from pathlib import Path
+
 import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
-from communication.shared_knowledge import SharedKnowledgeBase
-from communication.protocol import AgentCommunicationProtocol
-from integration.frontend_api import create_frontend_api
-from config.settings import settings
+if __package__ in (None, ""):
+    sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+from digital_twin_backend.communication.shared_knowledge import SharedKnowledgeBase
+from digital_twin_backend.communication.protocol import AgentCommunicationProtocol
+from digital_twin_backend.integration.frontend_api import create_frontend_api
+from digital_twin_backend.config.settings import settings
 
 
 # Global references

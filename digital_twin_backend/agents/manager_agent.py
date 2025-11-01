@@ -9,15 +9,15 @@ from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime, timedelta
 import json
 
-from agents.base_agent import DigitalTwinAgent, TaskAssessment, AgentResponse
-from communication.shared_knowledge import (
+from digital_twin_backend.agents.base_agent import DigitalTwinAgent, TaskAssessment, AgentResponse
+from digital_twin_backend.communication.shared_knowledge import (
     SharedKnowledgeBase, 
     TaskInfo, 
     NegotiationMessage,
     AgentCapabilities,
     TaskStatus
 )
-from config.settings import settings
+from digital_twin_backend.config.settings import settings
 
 
 class ManagerAgent(DigitalTwinAgent):

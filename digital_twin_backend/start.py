@@ -7,8 +7,10 @@ import sys
 import os
 from pathlib import Path
 
-# Add current directory to Python path
-sys.path.insert(0, str(Path(__file__).parent))
+# Ensure project root is on the Python path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 print("🎯 Digital Twin Workplace - Quick Start")
 print("=====================================")
@@ -71,14 +73,14 @@ async def quick_demo():
     
     try:
         # Import main components
-        from communication.shared_knowledge import SharedKnowledgeBase
-        from communication.protocol import AgentCommunicationProtocol
+        from digital_twin_backend.communication.shared_knowledge import SharedKnowledgeBase
+        from digital_twin_backend.communication.protocol import AgentCommunicationProtocol
         from agents.manager_agent import ManagerAgent
         from agents.worker_agent import WorkerAgent
-        from communication.shared_knowledge import (
+        from digital_twin_backend.communication.shared_knowledge import (
             TaskInfo, AgentCapabilities, TaskStatus
         )
-        from config.settings import AGENT_CONFIGS
+        from digital_twin_backend.config.settings import AGENT_CONFIGS
         
         # Initialize core systems
         print("🔄 Initializing shared knowledge...")

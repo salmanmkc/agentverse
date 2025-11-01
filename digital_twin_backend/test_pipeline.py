@@ -15,16 +15,23 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Ensure we can import local modules
-sys.path.insert(0, str(Path(__file__).parent))
+# Ensure project root is available for imports
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
-    from config.settings import settings, AGENT_CONFIGS
-    from communication.shared_knowledge import SharedKnowledgeBase, AgentCapabilities, TaskInfo, TaskStatus
-    from communication.protocol import AgentCommunicationProtocol
-    from agents.manager_agent import ManagerAgent
-    from agents.worker_agent import WorkerAgent
-    from finetuning import FineTuningOrchestrator
+    from digital_twin_backend.config.settings import settings, AGENT_CONFIGS
+    from digital_twin_backend.communication.shared_knowledge import (
+        SharedKnowledgeBase,
+        AgentCapabilities,
+        TaskInfo,
+        TaskStatus,
+    )
+    from digital_twin_backend.communication.protocol import AgentCommunicationProtocol
+    from digital_twin_backend.agents.manager_agent import ManagerAgent
+    from digital_twin_backend.agents.worker_agent import WorkerAgent
+    from digital_twin_backend.finetuning import FineTuningOrchestrator
 except ImportError as e:
     logger.error(f"❌ Import error: {e}")
     logger.error("Make sure you're running from the digital_twin_backend directory")
@@ -133,7 +140,7 @@ class PipelineTestSuite:
             await communication_protocol.register_agent("test_sender", test_message_handler)
             
             # Send test message
-            from communication.protocol import MessageType, MessagePriority
+            from digital_twin_backend.communication.protocol import MessageType, MessagePriority
             success = await communication_protocol.send_message(
                 from_agent="system",
                 to_agent="test_sender",

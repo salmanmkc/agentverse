@@ -17,17 +17,19 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Ensure we can import local modules
-sys.path.insert(0, str(Path(__file__).parent))
+# Ensure project root is available for imports
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
-    from scraping.scraper import SocialMediaScraper, create_consent, ConsentManager
-    from finetuning import FineTuningOrchestrator
-    from config.settings import settings, AGENT_CONFIGS
-    from communication.shared_knowledge import SharedKnowledgeBase, AgentCapabilities
-    from communication.protocol import AgentCommunicationProtocol
-    from agents.manager_agent import ManagerAgent
-    from agents.worker_agent import WorkerAgent
+    from digital_twin_backend.scraping.scraper import SocialMediaScraper, create_consent, ConsentManager
+    from digital_twin_backend.finetuning import FineTuningOrchestrator
+    from digital_twin_backend.config.settings import settings, AGENT_CONFIGS
+    from digital_twin_backend.communication.shared_knowledge import SharedKnowledgeBase, AgentCapabilities
+    from digital_twin_backend.communication.protocol import AgentCommunicationProtocol
+    from digital_twin_backend.agents.manager_agent import ManagerAgent
+    from digital_twin_backend.agents.worker_agent import WorkerAgent
 except ImportError as e:
     logger.error(f"❌ Import error: {e}")
     logger.error("Make sure you're running from the digital_twin_backend directory")

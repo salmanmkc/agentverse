@@ -28,7 +28,7 @@ except ImportError:
     GenerationConfig = None
     ML_AVAILABLE = False
 
-from communication.shared_knowledge import (
+from digital_twin_backend.communication.shared_knowledge import (
     SharedKnowledgeBase, 
     AgentCapabilities, 
     AgentContext, 
@@ -36,7 +36,7 @@ from communication.shared_knowledge import (
     NegotiationMessage,
     AgentStatus
 )
-from config.settings import settings
+from digital_twin_backend.config.settings import settings
 
 
 @dataclass

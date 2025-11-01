@@ -19,7 +19,7 @@ except ImportError:
     redis = None
     REDIS_AVAILABLE = False
 
-from communication.shared_knowledge import (
+from digital_twin_backend.communication.shared_knowledge import (
     SharedKnowledgeBase, 
     NegotiationMessage, 
     TaskInfo
