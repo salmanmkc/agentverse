@@ -9,13 +9,24 @@ from typing import Dict, List, Any, Optional, Union
 from datetime import datetime
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
-import torch
-from transformers import (
-    AutoTokenizer, 
-    AutoModelForCausalLM, 
-    pipeline,
-    GenerationConfig
-)
+
+# Optional AI/ML imports
+try:
+    import torch
+    from transformers import (
+        AutoTokenizer, 
+        AutoModelForCausalLM, 
+        pipeline,
+        GenerationConfig
+    )
+    ML_AVAILABLE = True
+except ImportError:
+    torch = None
+    AutoTokenizer = None
+    AutoModelForCausalLM = None
+    pipeline = None
+    GenerationConfig = None
+    ML_AVAILABLE = False
 
 from communication.shared_knowledge import (
     SharedKnowledgeBase, 
@@ -99,6 +110,12 @@ class DigitalTwinAgent(ABC):
     
     async def load_model(self) -> None:
         """Load the agent's fine-tuned model"""
+        if not ML_AVAILABLE:
+            print(f"⚠️  ML libraries not available for {self.agent_id}")
+            print("💡 Install with: pip install torch transformers datasets peft")
+            self.is_model_loaded = False
+            return
+            
         try:
             print(f"🔄 Loading model for {self.agent_id}...")
             
@@ -132,12 +149,19 @@ class DigitalTwinAgent(ABC):
             
         except Exception as e:
             print(f"❌ Failed to load model for {self.agent_id}: {e}")
+            print(f"⚠️  Agent {self.agent_id} will use fallback text generation")
             self.is_model_loaded = False
+            
+            # Set fallback model info
+            self.model = None
+            self.tokenizer = None
+            self.generation_config = None
     
     async def generate_response(self, prompt: str, context: Dict[str, Any] = None) -> str:
         """Generate a response using the agent's personality model"""
         if not self.is_model_loaded:
-            return f"[Model not loaded for {self.person_name}] {prompt}"
+            # Fallback response based on agent capabilities and context
+            return await self._generate_fallback_response(prompt, context or {})
         
         try:
             # Build full prompt with context
@@ -200,6 +224,26 @@ Current situation:
             personality_context += f"\nTask under discussion:\n{context['task_info']}\n"
         
         return f"{personality_context}\n\nPlease respond as {self.person_name} would: {prompt}"
+    
+    async def _generate_fallback_response(self, prompt: str, context: Dict[str, Any]) -> str:
+        """Generate fallback response when model is not available"""
+        
+        # Extract key information from prompt
+        if "task" in prompt.lower():
+            if any(skill in self.capabilities.technical_skills for skill in ["technical", "documentation"]):
+                return f"Hi! I'd be happy to help with this task. Given my background in {', '.join(self.capabilities.technical_skills.keys())}, I think I can contribute effectively. Let me know if you need more details about my availability or approach."
+            else:
+                return f"Thanks for considering me for this task. I'd like to discuss the requirements in more detail to see how I can best contribute. What are the main priorities and timeline?"
+        
+        elif "negotiation" in prompt.lower() or "discuss" in prompt.lower():
+            if self.capabilities.work_style.get("collaborative", False):
+                return f"I appreciate being part of this discussion. Based on what I'm seeing, I think we should consider everyone's workload and expertise. What does the team think about the best approach here?"
+            else:
+                return f"Looking at this situation, here's my honest assessment of how we should proceed. I'm happy to take on tasks that match my skills, but I want to make sure we're making the best decision for the team."
+        
+        else:
+            # Generic professional response
+            return f"Thanks for reaching out! As {self.person_name}, I'm ready to contribute to the team's success. Could you provide more context about what you need from me?"
     
     async def send_message(self, recipient_id: str, content: str, message_type: str = "general") -> None:
         """Send a message to another agent"""

@@ -8,8 +8,15 @@ from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 import json
-import redis.asyncio as redis
 from enum import Enum
+
+# Optional Redis import
+try:
+    import redis.asyncio as redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    redis = None
+    REDIS_AVAILABLE = False
 
 
 class TaskStatus(Enum):
@@ -97,14 +104,32 @@ class SharedKnowledgeBase:
         
     async def initialize(self):
         """Initialize the knowledge base and Redis connection"""
-        try:
-            self.redis_client = redis.from_url(self.redis_url, decode_responses=True)
-            await self.redis_client.ping()
-            print("✅ Connected to Redis for shared knowledge base")
-        except Exception as e:
-            print(f"⚠️  Redis connection failed: {e}")
-            print("📝 Using in-memory storage (data will not persist)")
+        if not REDIS_AVAILABLE:
+            print("⚠️  Redis not installed - using in-memory storage")
+            print("💡 Install redis with: pip install redis")
             self.redis_client = None
+        else:
+            try:
+                self.redis_client = redis.from_url(self.redis_url, decode_responses=True)
+                await self.redis_client.ping()
+                print("✅ Connected to Redis for shared knowledge base")
+            except Exception as e:
+                print(f"⚠️  Redis connection failed: {e}")
+                print("📝 Using in-memory storage (data will not persist)")
+                print("💡 To enable persistence, install and start Redis server")
+                self.redis_client = None
+        
+        # Initialize in-memory storage structures (always needed)
+        if not hasattr(self, 'agent_capabilities') or not self.agent_capabilities:
+            self.agent_capabilities = {}
+        if not hasattr(self, 'agent_contexts') or not self.agent_contexts:
+            self.agent_contexts = {}
+        if not hasattr(self, 'tasks') or not self.tasks:
+            self.tasks = {}
+        if not hasattr(self, 'negotiation_history') or not self.negotiation_history:
+            self.negotiation_history = {}
+        if not hasattr(self, 'task_assignments') or not self.task_assignments:
+            self.task_assignments = {}
     
     async def close(self):
         """Close Redis connection"""
@@ -327,5 +352,12 @@ class SharedKnowledgeBase:
         return min(utilization_stress + deadline_stress, 1.0)
 
 
-# Global instance
-shared_knowledge = SharedKnowledgeBase()
+# Global instance - will be initialized properly in main application
+shared_knowledge: Optional[SharedKnowledgeBase] = None
+
+def get_shared_knowledge() -> SharedKnowledgeBase:
+    """Get the global shared knowledge instance"""
+    global shared_knowledge
+    if shared_knowledge is None:
+        shared_knowledge = SharedKnowledgeBase()
+    return shared_knowledge

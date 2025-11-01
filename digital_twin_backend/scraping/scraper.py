@@ -61,6 +61,23 @@ class ConsentRecord:
         if self.expires_at and datetime.now() > self.expires_at:
             return False
         return True
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for storage"""
+        data = asdict(self)
+        data['consent_date'] = self.consent_date.isoformat()
+        if self.expires_at:
+            data['expires_at'] = self.expires_at.isoformat()
+        return data
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ConsentRecord':
+        """Create from dictionary"""
+        data = data.copy()
+        data['consent_date'] = datetime.fromisoformat(data['consent_date'])
+        if data.get('expires_at'):
+            data['expires_at'] = datetime.fromisoformat(data['expires_at'])
+        return cls(**data)
 
 
 class SocialMediaScraper:
@@ -499,11 +516,12 @@ class SocialMediaScraper:
                 with open(consent_file, 'r') as f:
                     consent_data = json.load(f)
                 
-                consent = ConsentRecord.from_dict(consent_data) if hasattr(ConsentRecord, 'from_dict') else consent_data
+                consent = ConsentRecord.from_dict(consent_data)
                 
                 # Check if consent is valid and covers this platform
-                if consent.get('consent_token') == self.consent_token and platform in consent.get('platforms', []):
-                    return True
+                if consent.consent_token == self.consent_token and platform in consent.platforms:
+                    if consent.is_valid():
+                        return True
                     
             except Exception as e:
                 print(f"⚠️  Error reading consent file: {e}")
@@ -613,7 +631,7 @@ class ConsentManager:
         # Save consent record
         consent_file = self.consent_dir / f"{person_name}_consent.json"
         with open(consent_file, 'w') as f:
-            json.dump(asdict(consent_record), f, indent=2, default=str)
+            json.dump(consent_record.to_dict(), f, indent=2)
         
         print(f"✅ Consent record created for {person_name}")
         print(f"🔑 Consent token: {consent_token}")
@@ -632,10 +650,10 @@ class ConsentManager:
             with open(consent_file, 'r') as f:
                 consent_data = json.load(f)
             
-            if consent_data.get('consent_token') == consent_token:
-                # Check expiration
-                expires_at = datetime.fromisoformat(consent_data.get('expires_at'))
-                return datetime.now() < expires_at
+            consent = ConsentRecord.from_dict(consent_data)
+            
+            if consent.consent_token == consent_token:
+                return consent.is_valid()
                 
         except Exception as e:
             print(f"❌ Error verifying consent: {e}")

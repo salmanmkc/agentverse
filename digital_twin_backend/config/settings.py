@@ -5,13 +5,16 @@ import os
 from typing import Dict, List, Optional
 from datetime import datetime
 from dataclasses import dataclass, field
-import os
+from pathlib import Path
 
 
 class Settings:
     """Application settings"""
     
     def __init__(self):
+        # Load .env file if it exists
+        self._load_env_file()
+        
         # Application
         self.APP_NAME = "Digital Twin Workplace"
         self.DEBUG = os.getenv("DEBUG", "False").lower() == "true"
@@ -47,6 +50,26 @@ class Settings:
         # Logging
         self.LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
         self.LOG_FILE = os.getenv("LOG_FILE", "digital_twins.log")
+    
+    def _load_env_file(self):
+        """Load environment variables from .env file"""
+        env_file = Path(".env")
+        
+        if env_file.exists():
+            try:
+                with open(env_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#') and '=' in line:
+                            key, value = line.split('=', 1)
+                            key = key.strip()
+                            value = value.strip().strip('"\'')
+                            os.environ[key] = value
+                print(f"✅ Loaded environment variables from {env_file}")
+            except Exception as e:
+                print(f"⚠️  Error loading .env file: {e}")
+        else:
+            print("📝 No .env file found, using default settings")
 
 
 class AgentConfig:

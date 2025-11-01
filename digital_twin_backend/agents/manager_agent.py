@@ -4,6 +4,7 @@ Phase 1: Individual consultation with each agent
 Phase 2: Facilitate peer negotiation among agents
 """
 import asyncio
+import time
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime, timedelta
 import json
@@ -175,10 +176,7 @@ class ManagerAgent(DigitalTwinAgent):
         if not agent_context:
             raise Exception(f"Agent {agent_id} not found in system")
         
-        # In a real implementation, this would send a message to the agent
-        # For now, we'll simulate the consultation based on agent capabilities
-        
-        # Build consultation message
+        # Send consultation message to the agent
         consultation_message = {
             "from": self.agent_id,
             "to": agent_id,
@@ -188,7 +186,8 @@ class ManagerAgent(DigitalTwinAgent):
             "timestamp": datetime.now().isoformat()
         }
         
-        # Simulate agent response (in reality, this would be async communication)
+        # TODO: In full implementation, send message via communication protocol
+        # For now, simulate the assessment based on agent capabilities
         assessment = await self._simulate_agent_assessment(agent_id, task)
         
         return assessment
@@ -397,7 +396,7 @@ and helps the team reach the best decision for everyone.
         if own_assessment.confidence > 0.7 and context.utilization < 0.6:
             message_type = "offer"
             content = f"I'm confident I can handle this {task.task_type} task. I have good availability and relevant experience."
-        elif own_assessment.confidence > 0.5 but context.utilization > 0.8:
+        elif own_assessment.confidence > 0.5 and context.utilization > 0.8:
             message_type = "conditional_offer"
             content = f"I could take this on, but I'm pretty busy. If others are also swamped, I can make it work."
         else:

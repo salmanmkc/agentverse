@@ -71,8 +71,8 @@ async def quick_demo():
     
     try:
         # Import main components
-        from communication.shared_knowledge import shared_knowledge
-        from communication.protocol import communication_protocol
+        from communication.shared_knowledge import SharedKnowledgeBase
+        from communication.protocol import AgentCommunicationProtocol
         from agents.manager_agent import ManagerAgent
         from agents.worker_agent import WorkerAgent
         from communication.shared_knowledge import (
@@ -82,10 +82,11 @@ async def quick_demo():
         
         # Initialize core systems
         print("🔄 Initializing shared knowledge...")
+        shared_knowledge = SharedKnowledgeBase()
         await shared_knowledge.initialize()
         
         print("🔄 Initializing communication protocol...")
-        communication_protocol.shared_knowledge = shared_knowledge
+        communication_protocol = AgentCommunicationProtocol(shared_knowledge)
         await communication_protocol.initialize()
         
         # Create a simple manager agent
