@@ -1,0 +1,40 @@
+# Core AI/ML Dependencies
+torch>=2.0.0
+transformers>=4.35.0
+accelerate>=0.24.0
+peft>=0.6.0  # For LoRA fine-tuning
+datasets>=2.14.0
+
+# Communication & Networking
+fastapi>=0.104.0
+uvicorn>=0.24.0
+websockets>=12.0
+redis>=5.0.0
+httpx>=0.25.0
+
+# Data Processing & Scraping
+selenium>=4.15.0
+beautifulsoup4>=4.12.0
+pandas>=2.1.0
+numpy>=1.25.0
+python-dotenv>=1.0.0
+
+# Database & Storage
+sqlalchemy>=2.0.0
+alembic>=1.12.0
+sqlite3  # Built-in
+
+# Utilities
+pydantic>=2.4.0
+pydantic-settings>=2.0.0
+python-multipart>=0.0.6
+python-json-logger>=2.0.7
+asyncio-mqtt>=0.13.0
+schedule>=1.2.0
+
+# Development & Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+black>=23.9.0
+flake8>=6.1.0
+mypy>=1.6.0
