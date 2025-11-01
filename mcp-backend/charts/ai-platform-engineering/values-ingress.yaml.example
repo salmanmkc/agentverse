@@ -1,0 +1,93 @@
+global:
+  ingress:
+    enabled: true
+    className: nginx
+    annotations: {}
+      # kubernetes.io/ingress.class: "nginx"
+      # kubernetes.io/tls-acme: "true"
+
+supervisor-agent:
+  ingress:
+    enabled: true
+    className: nginx
+    hosts: 
+    - supervisor-agent.local
+    tls: []
+      # - secretName: supervisor-agent-tls
+      #   hosts:
+      #     - supervisor-agent.local
+    annotations: {}
+      # kubernetes.io/ingress.class: "nginx"
+      # kubernetes.io/tls-acme: "true"
+
+agent-argocd:
+  ingress:
+    hosts: []
+      #  - agent-argocd.local
+    tls: []
+      # - secretName: agent-argocd-tls
+      #   hosts:
+      #     - agent-argocd.local
+
+agent-pagerduty:
+  ingress:
+    hosts: []
+      #  - agent-pagerduty.local
+    tls: []
+      # - secretName: agent-pagerduty-tls
+      #   hosts:
+      #     - agent-pagerduty.local
+
+agent-github:
+  ingress:
+    hosts: []
+      #  - agent-github.local
+    tls: []
+      # - secretName: agent-github-tls
+      #   hosts:
+      #     - agent-github.local
+
+agent-backstage:
+  ingress:
+    hosts: []
+      #  - agent-backstage.local
+    tls: []
+      # - secretName: agent-backstage-tls
+      #   hosts:
+      #     - agent-backstage.local
+
+agent-slack:
+  ingress:
+    hosts: []
+      #  - agent-slack.local
+    tls: []
+      # - secretName: agent-slack-tls
+      #   hosts:
+      #     - agent-slack.local
+
+agent-confluence:
+  ingress:
+    hosts: []
+      #  - agent-confluence.local
+    tls: []
+      # - secretName: agent-confluence-tls
+      #   hosts:
+      #     - agent-confluence.local
+
+agent-jira:
+  ingress:
+    hosts: []
+      #  - agent-jira.local
+    tls: []
+      # - secretName: agent-jira-tls
+      #   hosts:
+      #     - agent-jira.local
+
+agent-reflection:
+  ingress:
+    hosts: []
+      #  - agent-reflection.local
+    tls: []
+      # - secretName: agent-reflection-tls
+      #   hosts:
+      #     - agent-reflection.local
