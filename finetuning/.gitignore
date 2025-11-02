@@ -1,0 +1,44 @@
+# Data directories
+data/
+adapters/
+*.json
+*.jsonl
+
+# Credentials and tokens
+credentials.json
+token.pickle
+*.pkl
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Model files (large)
+*.bin
+*.safetensors
+*.pt
+*.pth
+
+# Logs
+*.log
+logs/
+
+# Personal files
+cvryanlin.txt

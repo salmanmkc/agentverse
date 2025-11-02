@@ -1,0 +1,29 @@
+# Core ML/AI Dependencies
+torch>=2.0.0
+transformers>=4.35.0
+accelerate>=0.24.0
+peft>=0.6.0
+datasets>=2.14.0
+bitsandbytes>=0.41.0
+
+# Data Processing
+pandas>=2.1.0
+numpy>=1.25.0
+
+# Gmail API
+google-auth>=2.23.0
+google-auth-oauthlib>=1.1.0
+google-api-python-client>=2.100.0
+html2text>=2020.1.16
+
+# OpenAI API (for synthetic generation)
+openai>=1.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+
+# Optional: Monitoring
+# tensorboard>=2.15.0
+# wandb>=0.15.0
+
