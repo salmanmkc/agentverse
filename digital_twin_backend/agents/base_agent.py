@@ -259,51 +259,24 @@ Current situation:
                 
                 client = openai.OpenAI(api_key=api_key)
                 
-                # Check if it's an Assistant (starts with 'asst_')
+                # Determine the actual model to use
+                model_to_use = self.api_model
+                
+                # If it's an Assistant ID, retrieve the assistant to get the fine-tuned model
                 if self.api_model.startswith('asst_'):
-                    # Use OpenAI Assistants API
-                    thread = client.beta.threads.create()
-                    
-                    # Add message to thread
-                    client.beta.threads.messages.create(
-                        thread_id=thread.id,
-                        role="user",
-                        content=full_prompt
-                    )
-                    
-                    # Run the assistant
-                    run = client.beta.threads.runs.create(
-                        thread_id=thread.id,
-                        assistant_id=self.api_model
-                    )
-                    
-                    # Wait for completion
-                    import time
-                    max_wait = 30  # seconds
-                    start_time = time.time()
-                    while run.status in ['queued', 'in_progress']:
-                        if time.time() - start_time > max_wait:
-                            return f"[Timeout] Assistant took too long to respond."
-                        time.sleep(0.5)
-                        run = client.beta.threads.runs.retrieve(
-                            thread_id=thread.id,
-                            run_id=run.id
-                        )
-                    
-                    if run.status == 'completed':
-                        # Get the messages
-                        messages = client.beta.threads.messages.list(
-                            thread_id=thread.id,
-                            order='desc',
-                            limit=1
-                        )
-                        return messages.data[0].content[0].text.value.strip()
-                    else:
-                        return f"[Error] Assistant run failed with status: {run.status}"
-                else:
-                    # Use Chat Completions API for fine-tuned models
+                    try:
+                        assistant = client.beta.assistants.retrieve(self.api_model)
+                        model_to_use = assistant.model
+                        print(f"💡 Retrieved model from assistant: {model_to_use}")
+                    except Exception as e:
+                        print(f"⚠️  Could not retrieve assistant, will try Chat API directly: {e}")
+                        # Fall back to using assistant_id as model (might fail but worth trying)
+                        model_to_use = self.api_model
+                
+                # Try Chat Completions API first (works with fine-tuned models)
+                try:
                     response = client.chat.completions.create(
-                        model=self.api_model,
+                        model=model_to_use,
                         messages=[
                             {"role": "system", "content": f"You are {self.person_name}, a digital twin agent. Respond in character based on your personality and capabilities."},
                             {"role": "user", "content": full_prompt}
@@ -313,6 +286,14 @@ Current situation:
                     )
                     
                     return response.choices[0].message.content.strip()
+                
+                except Exception as chat_error:
+                    # If Chat API fails and we have an assistant ID, try Assistants API as fallback
+                    if self.api_model.startswith('asst_'):
+                        print(f"⚠️  Chat API failed, trying Assistants API: {chat_error}")
+                        return await self._use_assistants_api(client, full_prompt)
+                    else:
+                        raise chat_error
             
             # Add support for other providers (Anthropic, etc.) here
             else:
@@ -325,6 +306,53 @@ Current situation:
         except Exception as e:
             print(f"❌ API error for {self.agent_id}: {e}")
             return await self._generate_fallback_response(prompt, context)
+    
+    async def _use_assistants_api(self, client, full_prompt: str) -> str:
+        """Fallback: Use Assistants API when Chat Completions fails"""
+        import time
+        
+        try:
+            # Create thread
+            thread = client.beta.threads.create()
+            
+            # Add message to thread
+            client.beta.threads.messages.create(
+                thread_id=thread.id,
+                role="user",
+                content=full_prompt
+            )
+            
+            # Run the assistant
+            run = client.beta.threads.runs.create(
+                thread_id=thread.id,
+                assistant_id=self.api_model
+            )
+            
+            # Wait for completion
+            max_wait = 30
+            start_time = time.time()
+            while run.status in ['queued', 'in_progress']:
+                if time.time() - start_time > max_wait:
+                    return f"[Timeout] Assistant took too long to respond."
+                time.sleep(0.5)
+                run = client.beta.threads.runs.retrieve(
+                    thread_id=thread.id,
+                    run_id=run.id
+                )
+            
+            if run.status == 'completed':
+                # Get the messages
+                messages = client.beta.threads.messages.list(
+                    thread_id=thread.id,
+                    order='desc',
+                    limit=1
+                )
+                return messages.data[0].content[0].text.value.strip()
+            else:
+                return f"[Error] Assistant run failed with status: {run.status}"
+        
+        except Exception as e:
+            return f"[Assistants API Error] {str(e)}"
     
     async def _generate_fallback_response(self, prompt: str, context: Dict[str, Any]) -> str:
         """Generate fallback response when model is not available"""

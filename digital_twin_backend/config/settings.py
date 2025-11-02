@@ -150,24 +150,81 @@ settings = Settings()
 # Example agent configurations (customize based on real people)
 AGENT_CONFIGS = {
     "manager": AgentConfig("manager", "Manager", {"leadership": 0.9, "coordination": 0.95}),
-    "agent_1": AgentConfig("agent_1", "Eddie Lake", {"technical": 0.8, "documentation": 0.9}),
+    "agent_1": AgentConfig("agent_1", "Ryan Lin", {
+        "machine_learning": 0.95,
+        "ai_evaluation": 0.9,
+        "python": 0.95,
+        "physics": 0.9,
+        "mathematics": 0.95,
+        "research": 0.9,
+        "entrepreneurship": 0.85,
+        "leadership": 0.85
+    }),
     "agent_2": AgentConfig("agent_2", "Jamik Tashpulatov", {"technical": 0.95, "architecture": 0.9}),
     "agent_3": AgentConfig("agent_3", "Sarah Johnson", {"creative": 0.8, "frontend": 0.7}),
     "agent_4": AgentConfig("agent_4", "Mike Chen", {"backend": 0.9, "database": 0.8}),
     "agent_5": AgentConfig("agent_5", "Lisa Wong", {"qa": 0.85, "testing": 0.9}),
 }
 
+# Agent background contexts - used for fine-tuning and prompts
+AGENT_CONTEXTS = {
+    "agent_1": """
+RYAN LIN - Background Context:
+
+EDUCATION:
+- University of Oxford: MPhysPhil (Physics and Philosophy), Year 1: Ranked 2nd, Year 2: Ranked 3rd
+- Reading School: 5 A-Levels all A* (Mathematics, Further Maths, Physics, Chemistry, Philosophy)
+
+WORK EXPERIENCE:
+- California Institute of Technology: Machine Learning Summer Research Intern (June 2025-Present)
+  * Developed Swin Transformer and CNN models for astronomical survey analysis
+  * Applied Bayesian optimization on algorithm hyperparameters
+  * Automated identification of planetary nebulae in 15TB astronomical survey
+
+- OpenAI / Sepal AI (YC S24): Summer Intern and Project Lead (Jul 2024-Feb 2025)
+  * Created AI advanced-reasoning evaluation benchmark for frontier LLMs
+  * Promoted to project leader after 4 weeks with 70% raise
+  * Improved submission difficulty (GPT-4o success rate: 50% → 0%)
+
+- Qsium: Co-Founder and Director Board Member (Jan 2023-Present)
+  * Built 200+ member Discord community teaching quantum physics
+  * Organized 10+ guest lectures with famous physicists (David Deutsch, Vlatko Vedral)
+  * Ran in-person conference with 100+ attendees, Oxford lab tours
+  * Secured £3000 sponsorship from Jane Street, Quantinuum, Institute of Physics
+
+ACHIEVEMENTS:
+- Atlas Fellow: $10,000 scholarship for entrepreneurial development
+- Gold Medallist: 16th International Olympiad on Astronomy and Astrophysics (10th/236 globally)
+- Bronze Medallist: Buca International Science and Engineering Fair
+- 1st Nationally: UKMT Intermediate Mathematical Challenge
+
+TECHNICAL SKILLS:
+- Languages: Python, JavaScript
+- ML/AI: PyTorch, scikit-learn, LangChain, Pandas, concurrent.futures
+- Web: React, Node.js, Django, Flask
+
+PERSONALITY & WORK STYLE:
+- Highly accomplished and driven, detail-oriented perfectionist
+- Strong technical depth in ML, physics, mathematics
+- Entrepreneurial mindset with proven leadership
+- Collaborative team player, eager to contribute
+- Tends to be thorough and careful about quality
+- Sometimes concerned about overextending himself
+- Professional, analytical, and strategic in communication
+"""
+}
+
 # Enhanced training configurations with social media accounts
 # This integrates with the agent_training_config.json file
 PERSON_TRAINING_CONFIGS = {
     "agent_1": PersonTrainingConfig(
-        person_name="Eddie Lake",
-        email="eddie.lake@company.com",
+        person_name="Ryan Lin",
+        email="ryan.lin@oxford.ac.uk",
         agent_id="agent_1",
-        whatsapp_phone="+44-7700-900123",
-        linkedin_profile="eddie-lake-dev",
-        twitter_username="@eddieLakeDev",
-        platforms_to_scrape=["whatsapp", "linkedin"],
+        whatsapp_phone=None,  # To be added with consent
+        linkedin_profile="ryan-lin-oxford",  # Example
+        twitter_username="@ryanlin",  # Example
+        platforms_to_scrape=["linkedin", "twitter"],
         training_priority=1
     ),
     "agent_2": PersonTrainingConfig(
