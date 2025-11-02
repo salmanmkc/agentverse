@@ -110,7 +110,9 @@ class GmailExtractor:
     def extract_message_data(self, message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Extract and parse message data"""
         try:
-            msg_id = message['id']
+            msg_id = message.get('id')
+            if not msg_id:
+                return None
             
             # Get full message
             full_message = self.service.users().messages().get(
@@ -216,16 +218,16 @@ class GmailExtractor:
     
     def extract_emails(
         self,
-        max_results: int = 5000,
+        max_results: Optional[int] = None,
         query: str = '',
         include_sent: bool = True,
         include_received: bool = True
     ) -> List[Dict[str, Any]]:
         """
-        Extract emails from Gmail
+        Extract emails from Gmail with full pagination
         
         Args:
-            max_results: Maximum number of emails to extract
+            max_results: Maximum number of emails to extract (None = all)
             query: Gmail search query (e.g., 'is:unread', 'after:2024/1/1')
             include_sent: Include sent emails
             include_received: Include received emails
@@ -234,6 +236,7 @@ class GmailExtractor:
             print("❌ Not authenticated. Call authenticate() first.")
             return []
         
+        all_message_ids = []
         all_messages = []
         
         try:
@@ -249,38 +252,52 @@ class GmailExtractor:
             
             print(f"🔍 Searching Gmail with query: '{full_query}'")
             
-            # List messages
-            results = self.service.users().messages().list(
-                userId='me',
-                q=full_query,
-                maxResults=min(max_results, 500)  # Gmail API limit
-            ).execute()
+            # Collect all message IDs with pagination
+            page_token = None
+            page_count = 0
             
-            messages = results.get('messages', [])
-            total_found = len(messages)
+            while True:
+                page_count += 1
+                request_params = {
+                    'userId': 'me',
+                    'q': full_query,
+                    'maxResults': 500  # Gmail API maximum
+                }
+                
+                if page_token:
+                    request_params['pageToken'] = page_token
+                
+                results = self.service.users().messages().list(**request_params).execute()
+                page_messages = results.get('messages', [])
+                all_message_ids.extend([msg['id'] for msg in page_messages])
+                
+                print(f"📄 Page {page_count}: Found {len(page_messages)} messages (total: {len(all_message_ids)})")
+                
+                if max_results and len(all_message_ids) >= max_results:
+                    all_message_ids = all_message_ids[:max_results]
+                    break
+                
+                page_token = results.get('nextPageToken')
+                if not page_token:
+                    break
             
-            # Get all pages if needed
-            while 'nextPageToken' in results and len(all_messages) < max_results:
-                results = self.service.users().messages().list(
-                    userId='me',
-                    q=full_query,
-                    maxResults=min(max_results - len(all_messages), 500),
-                    pageToken=results['nextPageToken']
-                ).execute()
-                messages.extend(results.get('messages', []))
-            
-            print(f"📧 Found {len(messages)} messages")
+            print(f"📧 Total message IDs found: {len(all_message_ids)}")
             
             # Extract message data
-            for i, message in enumerate(messages[:max_results]):
+            for i, message_id in enumerate(all_message_ids):
                 if (i + 1) % 100 == 0:
-                    print(f"⏳ Processing message {i + 1}/{len(messages[:max_results])}...")
+                    print(f"⏳ Processing message {i + 1}/{len(all_message_ids)}...")
                 
-                message_data = self.extract_message_data(message)
-                if message_data:
-                    all_messages.append(message_data)
+                try:
+                    message = {'id': message_id}
+                    message_data = self.extract_message_data(message)
+                    if message_data:
+                        all_messages.append(message_data)
+                except Exception as e:
+                    print(f"⚠️  Error processing message {message_id}: {e}")
+                    continue
             
-            print(f"✅ Extracted {len(all_messages)} emails")
+            print(f"✅ Extracted {len(all_messages)} emails successfully")
             return all_messages
             
         except HttpError as error:
