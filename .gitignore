@@ -137,6 +137,8 @@ mcp-backend/volumes/
 
 # Credentials and sensitive files
 credentials.json
+api_keys.json
+**/api_keys.json
 *.key
 *.pem
 *.p12
