@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agent.fullname" . }}
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "agent.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "agent.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "agent.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.image.command }}
+          command:
+            {{- range .Values.image.command }}
+            - {{ . | quote }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.image.args }}
+          args:
+            {{- range .Values.image.args }}
+            - {{ . | quote }}
+            {{- end }}
+          {{- end }}
+          ports:
+            {{- if .Values.service.ports }}
+            {{- range .Values.service.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .port }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+            {{- else }}
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+            {{- end }}
+          envFrom:
+            {{- $llmSecretName := include "agent.llmSecrets.secretName" . | trim -}}
+            {{- if $llmSecretName }}
+            - secretRef:
+                name: {{ $llmSecretName }}
+            {{- end }}
+            {{- $agentSecretName := include "agent.agentSecrets.secretName" . | trim -}}
+            {{- if $agentSecretName }}
+            - secretRef:
+                name: {{ $agentSecretName }}
+            {{- end }}
+          {{- if or .Values.env (eq (include "agent.slim.enabled" .) "true") (eq .Values.mcp.mode "http") }}
+          env:
+            {{- if .Values.env }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if eq (include "agent.slim.enabled" .) "true" }}
+            - name: A2A_TRANSPORT
+              value: {{ include "agent.slim.transport" . | quote }}
+            - name: SLIM_ENDPOINT
+              value: {{ include "agent.slim.endpoint" . | quote }}
+            {{- end }}
+            {{- if eq .Values.mcp.mode "http" }}
+            - name: MCP_MODE
+              value: http
+            - name: MCP_PORT
+              value: {{ .Values.mcp.service.port | quote }}
+            - name: MCP_HOST
+              value: {{ include "agent.fullname" . }}-mcp
+            {{- end }}
+          {{- end }}
+          {{- if not (eq (include "agent.slim.enabled" .) "true") }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

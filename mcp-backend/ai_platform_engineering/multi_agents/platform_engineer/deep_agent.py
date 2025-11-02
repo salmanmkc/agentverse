@@ -1,0 +1,247 @@
+# Copyright 2025 CNOE Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+import logging
+import uuid
+import os
+import threading
+from langchain_core.messages import AIMessage
+from langgraph.graph.state import CompiledStateGraph
+from langgraph.checkpoint.memory import InMemorySaver
+from cnoe_agent_utils import LLMFactory
+
+
+from ai_platform_engineering.multi_agents.platform_engineer import platform_registry
+from ai_platform_engineering.multi_agents.platform_engineer.prompts import agent_prompts, generate_system_prompt
+from deepagents import async_create_deep_agent
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+class AIPlatformEngineerMAS:
+  def __init__(self):
+    # Use existing platform_registry and enable dynamic monitoring
+    platform_registry.enable_dynamic_monitoring(on_change_callback=self._on_agents_changed)
+
+    # Thread safety for graph access
+    self._graph_lock = threading.RLock()
+    self._graph = None
+    self._graph_generation = 0  # Track graph version for debugging
+
+    # Build initial graph
+    self._build_graph()
+
+    logger.info(f"AIPlatformEngineerMAS initialized with {len(platform_registry.agents)} agents")
+
+  def get_graph(self) -> CompiledStateGraph:
+    """
+    Returns the current compiled LangGraph instance.
+    Thread-safe access to the graph.
+
+    Returns:
+        CompiledStateGraph: The current compiled LangGraph instance.
+    """
+    with self._graph_lock:
+      return self._graph
+
+  def _on_agents_changed(self):
+    """Callback triggered when agent registry detects changes."""
+    logger.info("Agent registry change detected, rebuilding graph...")
+    self._rebuild_graph()
+
+  def _rebuild_graph(self) -> bool:
+    """
+    Rebuild the graph with current agents from registry.
+
+    Returns:
+        bool: True if graph was rebuilt successfully
+    """
+    try:
+      with self._graph_lock:
+        old_generation = self._graph_generation
+        self._build_graph()
+        logger.info(f"Graph successfully rebuilt (generation {old_generation} → {self._graph_generation})")
+        return True
+    except Exception as e:
+      logger.error(f"Failed to rebuild graph: {e}")
+      return False
+
+  def force_refresh_agents(self) -> bool:
+    """
+    Force immediate refresh of agent connectivity and rebuild graph if needed.
+
+    Returns:
+        bool: True if changes were detected and graph was rebuilt
+    """
+    logger.info("Force refresh requested")
+    return platform_registry.force_refresh()
+
+  def get_status(self) -> dict:
+    """Get current status for monitoring/debugging."""
+    with self._graph_lock:
+      return {
+        "graph_generation": self._graph_generation,
+        "registry_status": platform_registry.get_registry_status()
+      }
+
+  def _build_graph(self) -> None:
+    """
+    Internal method to construct and compile a DeepAgents graph with current agents.
+    Updates self._graph and increments generation counter.
+    """
+    logger.debug(f"Building deep agent (generation {self._graph_generation + 1})...")
+
+    base_model = LLMFactory().get_llm()
+
+    # Get fresh tools from registry
+    all_agents = platform_registry.get_all_agents()
+
+    # Dynamically generate system prompt and subagents from current registry
+    current_agents = platform_registry.agents
+    system_prompt = generate_system_prompt(current_agents)
+    subagents = platform_registry.generate_subagents(agent_prompts)
+
+    logger.info(f'🔧 Rebuilding with {len(all_agents)} tools and {len(subagents)} sub_agents')
+    logger.info(f'📦 Tools: {[t.name for t in all_agents]}')
+    logger.info(f'🤖 Subagents: {[s["name"] for s in subagents]}')
+
+    # Create the Deep Agent
+    # NOTE: Sub-agents are A2A tools, not Deep Agent subagents
+    # Streaming is handled via A2ARemoteAgentConnectTool's streaming implementation
+    deep_agent = async_create_deep_agent(
+      tools=all_agents,
+      instructions=system_prompt,
+      subagents=subagents,
+      model=base_model,
+      # response_format=PlatformEngineerResponse
+    )
+
+    # Check if LANGGRAPH_DEV is defined in the environment
+    if os.getenv("LANGGRAPH_DEV"):
+      checkpointer = None
+    else:
+      checkpointer = InMemorySaver()
+
+    # Attach checkpointer if desired
+    if checkpointer is not None:
+      deep_agent.checkpointer = checkpointer
+
+    # Atomically update graph and increment generation
+    self._graph = deep_agent
+    self._graph_generation += 1
+
+    logger.debug(f"Deep agent created successfully (generation {self._graph_generation})")
+    logger.info(f"✅ Deep agent updated with {len(all_agents)} tools and {len(subagents)} subagents")
+
+
+  async def serve(self, prompt: str):
+    """
+    Processes the input prompt and returns a response from the graph.
+    Args:
+        prompt (str): The input prompt to be processed by the graph.
+    Returns:
+        str: The response generated by the graph based on the input prompt.
+    """
+    try:
+      logger.debug(f"Received prompt: {prompt}")
+      if not isinstance(prompt, str) or not prompt.strip():
+        raise ValueError("Prompt must be a non-empty string.")
+      graph = self.get_graph()
+      result = await graph.ainvoke({
+          "messages": [
+              {
+                  "role": "user",
+                  "content": prompt
+              }
+          ],
+      }, {"configurable": {"thread_id": uuid.uuid4()}})
+
+      messages = result.get("messages", [])
+      if not messages:
+        raise RuntimeError("No messages found in the graph response.")
+
+      # Find the last AIMessage with non-empty content
+      for message in reversed(messages):
+        if isinstance(message, AIMessage) and message.content.strip():
+          logger.debug(f"Valid AIMessage found: {message.content.strip()}")
+          return message.content.strip()
+
+      raise RuntimeError("No valid AIMessage found in the graph response.")
+    except ValueError as ve:
+      logger.error(f"ValueError in serve method: {ve}")
+      raise ValueError(str(ve))
+    except Exception as e:
+      logger.error(f"Error in serve method: {e}")
+      raise Exception(str(e))
+
+  async def serve_stream(self, prompt: str):
+    """
+    Processes the input prompt and streams responses from the graph.
+    This allows the UI to show the todo list as it's created, before tool calls are made.
+
+    Args:
+        prompt (str): The input prompt to be processed by the graph.
+    Yields:
+        dict: Streaming events from the graph including agent responses and tool calls.
+    """
+    try:
+      logger.debug(f"Received streaming prompt: {prompt}")
+      if not isinstance(prompt, str) or not prompt.strip():
+        raise ValueError("Prompt must be a non-empty string.")
+
+      graph = self.get_graph()
+      thread_id = str(uuid.uuid4())
+
+      # Stream events from the graph
+      async for event in graph.astream_events(
+          {
+              "messages": [
+                  {
+                      "role": "user",
+                      "content": prompt
+                  }
+              ],
+          },
+          {"configurable": {"thread_id": thread_id}},
+          version="v2"
+      ):
+        # Stream agent response chunks (includes todo list planning)
+        if event["event"] == "on_chat_model_stream":
+          chunk = event.get("data", {}).get("chunk")
+          if chunk and hasattr(chunk, "content") and chunk.content:
+            yield {
+              "type": "content",
+              "data": chunk.content
+            }
+
+        # Stream tool call start events
+        elif event["event"] == "on_tool_start":
+          tool_name = event.get("name", "unknown")
+          yield {
+            "type": "tool_start",
+            "tool": tool_name,
+            "data": f"\n\n🔧 Calling {tool_name}...\n"
+          }
+
+        # Stream tool results
+        elif event["event"] == "on_tool_end":
+          tool_name = event.get("name", "unknown")
+          yield {
+            "type": "tool_end",
+            "tool": tool_name,
+            "data": f"✅ {tool_name} completed\n"
+          }
+
+    except ValueError as ve:
+      logger.error(f"ValueError in serve_stream method: {ve}")
+      yield {
+        "type": "error",
+        "data": str(ve)
+      }
+    except Exception as e:
+      logger.error(f"Error in serve_stream method: {e}")
+      yield {
+        "type": "error",
+        "data": str(e)
+      }
+

@@ -1,0 +1,151 @@
+agent_name: "AI Platform Engineer"
+agent_description: |
+  The AI Platform Engineer — Deep Agent is the central orchestrator in the CAIPE (Community AI Platform Engineering) ecosystem.
+  It coordinates specialized sub-agents and tools as well as a RAG knowledge base for documentation and process recall.
+
+system_prompt_template: |
+
+  Your are an Engineering manager - You are supposed to be able to break down tasks, into more manageable tasks for team members. You also will be matching team members from GitHub MCP responses to tasks.
+
+  When you get a prompt like: Generate subtasks for the following task, only respond only in JSON like this:
+  {
+  "subtasks": [
+      {
+        "id": "unique-id",
+        "title": "Clear, concise title",
+        "description": "Detailed description of what needs to be done",
+        "status": "todo",
+        "assignedTo": [],
+        "createdAt": "ISO timestamp",
+        "updatedAt": "ISO timestamp",
+        "estimatedHours": 8,
+        "completed": false
+      }
+    ]
+  }
+
+
+  {tool_instructions}
+
+agent_prompts:
+  argocd:
+    system_prompt: |
+      Handle ArgoCD GitOps operations:
+      - create, update, delete, or sync applications
+      - check status, health, or image versions
+      - rollback or promote deployments
+  aws:
+    system_prompt: |
+      Handle AWS operations:
+      - EKS cluster management, IAM, S3, CloudWatch, cost and security analytics
+  backstage:
+    system_prompt: |
+      Handle Backstage catalog operations:
+      - query services, ownership, and metadata
+  confluence:
+    system_prompt: |
+      Handle Confluence operations:
+      - create, update, or search confluence pages
+  github:
+    system_prompt: |
+      Handle GitHub repository operations:
+      - pull requests, issues, commits, branches, and releases
+  jira:
+    system_prompt: |
+      Handle Jira operations:
+      - create or update issues, modify statuses, search by filters or labels
+  pagerduty:
+    system_prompt: |
+      Handle PagerDuty operations:
+      - on-call schedules, incidents, and acknowledgements
+  slack:
+    system_prompt: |
+      Handle Slack workspace operations:
+      - send messages, create channels, list members, archive threads
+  splunk:
+    system_prompt: |
+      Handle Splunk observability operations:
+      - log searches, alert management, detector health
+  komodor:
+    system_prompt: |
+      Handle Komodor operations:
+      - cluster risk analysis, RCA triggers, health inspection
+  webex:
+    system_prompt: |
+      Handle Webex collaboration operations:
+      - room messaging, membership, and notifications
+  petstore:
+    system_prompt: |
+      Handle Petstore mock operations:
+      - pet CRUD, inventory, and API demonstration
+  weather:
+    system_prompt: |
+      Handle weather queries:
+      - current conditions, forecasts, and alerts
+  rag:
+    system_prompt: |
+      Handle ALL knowledge retrievals.
+      - technical documentation, runbooks, architecture, and standards
+      - synthesize top 2–3 documents, cite titles/sections
+      - clarify discrepancies, propose follow-up facets
+      - never generate new knowledge or opinions
+
+
+agent_skill_examples:
+  general:
+    - "List supported agents"
+    - "Explain your routing logic"
+  argocd:
+    - "Sync ArgoCD application"
+    - "Get status of all apps"
+  aws:
+    - "Check EKS cluster health"
+    - "List active IAM roles"
+  backstage:
+    - "Find service by owner"
+    - "Retrieve service metadata"
+  confluence:
+    - "Find pages about deployment pipeline"
+  github:
+    - "List open pull requests"
+    - "Show recent commits"
+  jira:
+    - "List critical open issues"
+  pagerduty:
+    - "Who is on call now?"
+  slack:
+    - "Send message to #platform-alerts"
+  splunk:
+    - "Search for error logs in last hour"
+  komodor:
+    - "Run RCA for cluster X"
+  webex:
+    - "Post summary to Webex room"
+  petstore:
+    - "Get available pets by status"
+  weather:
+    - "Forecast for San Francisco"
+  rag:
+    - "Explain CAIPE onboarding process"
+    - "Describe gateway authentication flow"
+  incident-investigator:
+    - "Investigate API outage root cause"
+    - "Analyze database connection failures"
+    - "Why did the Kubernetes pods crash?"
+    - "Root cause analysis for DNS issues"
+  incident-documenter:
+    - "Create postmortem for yesterday's outage"
+    - "Document the database incident"
+    - "Generate post-incident report"
+    - "Create follow-up tickets for incident"
+  mttr-analyst:
+    - "Generate monthly MTTR report"
+    
+    - "Analyze recovery time trends"
+    - "MTTR improvement recommendations"
+    - "Time to resolution analysis"
+  uptime-analyst:
+    - "Generate uptime report for Q4"
+    - "SLO compliance analysis"
+    - "Service availability metrics"
+    - "Downtime pattern analysis"

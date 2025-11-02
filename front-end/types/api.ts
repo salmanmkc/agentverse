@@ -23,6 +23,9 @@ export interface AnalyzeMetricsResponse {
 
 export interface FindMatchesRequest {
   subtask: Subtask
+  taskTitle: string
+  taskDescription: string
+  githubRepo?: string
   availableUserIds?: string[]
 }
 
