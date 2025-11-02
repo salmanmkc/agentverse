@@ -129,7 +129,7 @@ export function Step4Matching({ state, updateState }: Step4MatchingProps) {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-full mx-auto">
       <div>
         <h3 className="text-lg font-semibold mb-2">Team Member Matching</h3>
         <p className="text-sm text-muted-foreground">

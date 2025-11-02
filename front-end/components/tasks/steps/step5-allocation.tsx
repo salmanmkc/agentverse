@@ -32,7 +32,7 @@ export function Step5Allocation({ state, updateState }: Step5AllocationProps) {
   const allAllocated = unallocatedSubtasks.length === 0
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-full mx-auto">
       <div>
         <h3 className="text-lg font-semibold mb-2">Review & Deploy</h3>
         <p className="text-sm text-muted-foreground">

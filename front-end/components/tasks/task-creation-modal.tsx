@@ -61,7 +61,7 @@ export function TaskCreationModal({
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-5xl h-[90vh] p-0 gap-0" showCloseButton={false}>
+      <DialogContent className="mask-x-to-yellow-700xl h-[90vh] p-0 gap-0" showCloseButton={false}>
         {/* Visually hidden title for accessibility */}
         <DialogTitle className="sr-only">
           {stepTitles[state.step - 1]} - Step {state.step} of 5

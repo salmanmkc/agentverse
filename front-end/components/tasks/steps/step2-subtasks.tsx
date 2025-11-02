@@ -76,8 +76,8 @@ export function Step2Subtasks({ state, updateState }: Step2SubtasksProps) {
   const hasSubtasks = state.generatedSubtasks.length > 0
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      {!hasSubtasks ? (
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {!state.generatedSubtasks.length ? (
         <div className="text-center space-y-4 py-12">
           <div className="size-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
             <IconSparkles className="size-8 text-primary" />
