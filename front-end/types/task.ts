@@ -17,9 +17,17 @@ export interface Subtask {
 export interface MatchCandidate {
   user: User
   matchPercentage: number
+  confidence: number // 0-100, confidence in this match
   rank: number // 1, 2, or 3
   reasoning: string
   skillMatches: string[]
+  estimatedCompletionHours: number // How long this person would take
+  githubActivity: {
+    openPRs: number
+    closedPRs: number
+    openIssues: number
+    closedIssues: number
+  }
 }
 
 export interface TaskMetric {

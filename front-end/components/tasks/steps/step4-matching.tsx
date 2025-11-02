@@ -39,22 +39,17 @@ export function Step4Matching({ state, updateState }: Step4MatchingProps) {
       setCurrentSubtaskIndex(i)
       const subtask = state.generatedSubtasks[i]
 
-      // Simulate phases
       setMatchingPhase("analyzing")
-      await new Promise((resolve) => setTimeout(resolve, 600))
-
-      setMatchingPhase("comparing")
-      await new Promise((resolve) => setTimeout(resolve, 600))
-
-      setMatchingPhase("ranking")
       const response = await aiService.findMatches({
         subtask,
+        taskTitle: state.task.title || '',
+        taskDescription: state.task.description || '',
+        githubRepo: 'salmanmkc/agentverse',
         availableUserIds: users.map((u) => u.id),
       })
 
       results.set(subtask.id, response.matches)
       setMatchingPhase("complete")
-      await new Promise((resolve) => setTimeout(resolve, 300))
     }
 
     updateState({ matchResults: results })
@@ -225,28 +220,54 @@ export function Step4Matching({ state, updateState }: Step4MatchingProps) {
                               <p className="text-sm text-muted-foreground mb-2">
                                 {match.reasoning}
                               </p>
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs text-muted-foreground">
-                                    Match:
-                                  </span>
-                                  <span className="text-xs font-medium">
-                                    {match.matchPercentage}%
-                                  </span>
-                                </div>
-                                {match.skillMatches.length > 0 && (
-                                  <div className="flex gap-1">
-                                    {match.skillMatches.slice(0, 3).map((skill) => (
-                                      <Badge
-                                        key={skill}
-                                        variant="secondary"
-                                        className="text-xs"
-                                      >
-                                        {skill}
-                                      </Badge>
-                                    ))}
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-muted-foreground">
+                                      Match:
+                                    </span>
+                                    <span className="text-xs font-medium">
+                                      {match.matchPercentage}%
+                                    </span>
                                   </div>
-                                )}
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-muted-foreground">
+                                      Confidence:
+                                    </span>
+                                    <span className="text-xs font-medium">
+                                      {match.confidence}%
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-muted-foreground">
+                                      ETA:
+                                    </span>
+                                    <span className="text-xs font-medium">
+                                      ~{match.estimatedCompletionHours}h
+                                    </span>
+                                  </div>
+                                  {match.skillMatches.length > 0 && (
+                                    <div className="flex gap-1">
+                                      {match.skillMatches.slice(0, 3).map((skill) => (
+                                        <Badge
+                                          key={skill}
+                                          variant="secondary"
+                                          className="text-xs"
+                                        >
+                                          {skill}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>GitHub:</span>
+                                  <span>{match.githubActivity.closedPRs} PRs merged</span>
+                                  <span>•</span>
+                                  <span>{match.githubActivity.closedIssues} issues resolved</span>
+                                  <span>•</span>
+                                  <span>{match.githubActivity.openPRs + match.githubActivity.openIssues} active</span>
+                                </div>
                               </div>
                             </div>
 
