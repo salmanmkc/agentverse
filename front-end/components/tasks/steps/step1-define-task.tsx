@@ -13,8 +13,9 @@ import {
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { IconX } from "@tabler/icons-react"
+import { IconX, IconSend } from "@tabler/icons-react"
 import { useState } from "react"
+import { aiService } from "@/services/ai-service"
 
 interface Step1DefineTaskProps {
   state: TaskCreationState
@@ -23,6 +24,8 @@ interface Step1DefineTaskProps {
 
 export function Step1DefineTask({ state, updateState }: Step1DefineTaskProps) {
   const [tagInput, setTagInput] = useState("")
+  const [isTestingAPI, setIsTestingAPI] = useState(false)
+  const [apiResponse, setApiResponse] = useState("")
 
   const handleAddTag = () => {
     if (tagInput.trim() && (!state.task.tags || !state.task.tags.includes(tagInput.trim()))) {
@@ -43,6 +46,29 @@ export function Step1DefineTask({ state, updateState }: Step1DefineTaskProps) {
         tags: (state.task.tags || []).filter((t) => t !== tag),
       },
     })
+  }
+
+  const handleTestAPI = async () => {
+    if (!state.task.title || !state.task.description) {
+      alert('Please fill in both Task Title and Description')
+      return
+    }
+
+    setIsTestingAPI(true)
+    setApiResponse('')
+
+    try {
+      const message = `Task: ${state.task.title}\n\nDescription: ${state.task.description}`
+      
+      await aiService.sendStreamingMessage(message, (chunk) => {
+        setApiResponse((prev) => prev + chunk)
+      })
+    } catch (error) {
+      console.error('API test failed:', error)
+      setApiResponse(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsTestingAPI(false)
+    }
   }
 
   return (
@@ -149,6 +175,28 @@ export function Step1DefineTask({ state, updateState }: Step1DefineTaskProps) {
                 </button>
               </Badge>
             ))}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleTestAPI}
+          disabled={isTestingAPI || !state.task.title || !state.task.description}
+          className="w-full"
+        >
+          <IconSend className="size-4 mr-2" />
+          {isTestingAPI ? 'Testing API...' : 'Test API Connection'}
+        </Button>
+
+        {apiResponse && (
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <h4 className="font-medium mb-2">API Response:</h4>
+            <pre className="text-sm text-muted-foreground whitespace-pre-wrap break-words max-h-64 overflow-y-auto">
+              {apiResponse}
+            </pre>
           </div>
         )}
       </div>
