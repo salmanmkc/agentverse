@@ -401,56 +401,44 @@ Description: ${request.description}
 Subtasks:
 ${subtasksDescription}
 
-Please provide a JSON response in this exact format:
+IMPORTANT: Respond with ONLY a valid JSON object in this exact format (no markdown, no code blocks, no additional text):
+
 {
   "metrics": [
     {
       "metric": "Impact",
       "value": 75,
-      "description": "Clear description of the impact",
+      "description": "How this affects the system and users",
       "category": "impact"
     },
     {
       "metric": "Urgency",
       "value": 65,
-      "description": "Clear description of the urgency",
+      "description": "Time sensitivity of this task",
       "category": "urgency"
     },
     {
       "metric": "Complexity",
       "value": 80,
-      "description": "Clear description of the complexity",
+      "description": "Technical complexity and skill requirements",
       "category": "complexity"
     },
     {
       "metric": "Dependencies",
       "value": 55,
-      "description": "Clear description of dependencies",
+      "description": "Dependencies on other systems and tasks",
       "category": "dependencies"
     },
     {
       "metric": "Risk",
       "value": 60,
-      "description": "Clear description of risks",
+      "description": "Potential risks and uncertainty",
       "category": "risk"
     }
   ]
 }
 
-Analyze the task and provide realistic metric values (0-100) for:
-- Impact: How much this task will affect the system and users
-- Urgency: Time sensitivity based on project timeline
-- Complexity: Technical complexity and skill requirements
-- Dependencies: Number of other tasks and systems this affects
-- Risk: Potential risks and uncertainty involved
-
-Each metric should have:
-- metric: The metric name (exactly as shown above)
-- value: A number between 0-100
-- description: A clear, concise explanation (no markdown formatting)
-- category: One of: "impact", "urgency", "complexity", "dependencies", "risk"
-
-Return ONLY the JSON object, no additional text or markdown.`
+Provide realistic values (0-100) based on the task and subtasks. Generate exactly 5 metrics with all required fields.`
 
     try {
       const fullResponse = await this.sendStreamingMessage(prompt)
@@ -469,7 +457,8 @@ Return ONLY the JSON object, no additional text or markdown.`
     request: AnalyzeMetricsRequest
   ): Promise<AnalyzeMetricsResponse> {
     try {
-      console.log("Parsing metrics AI response")
+      console.log("Parsing metrics AI response, length:", fullResponse.length)
+      console.log("Response preview:", fullResponse.substring(0, 300))
 
       // Parse SSE (Server-Sent Events) format
       const lines = fullResponse.split('\n')
@@ -496,21 +485,35 @@ Return ONLY the JSON object, no additional text or markdown.`
         }
       }
 
+      console.log("Extracted metrics content length:", contentText.length)
       console.log("Extracted metrics content:", contentText)
 
-      // Try to parse as JSON
-      if (contentText.includes("{") && contentText.includes("metrics")) {
+      // Try to extract and parse JSON from the content
+      let jsonStr = contentText.trim()
+      
+      // Remove markdown code blocks if present
+      if (jsonStr.includes('```')) {
+        const codeBlockMatch = jsonStr.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
+        if (codeBlockMatch) {
+          jsonStr = codeBlockMatch[1]
+          console.log("Extracted JSON from markdown code block")
+        }
+      }
+      
+      // Try to find JSON object in the text
+      if (jsonStr.includes("{") && jsonStr.includes("metrics")) {
         try {
-          const firstBrace = contentText.indexOf('{')
+          let startIndex = jsonStr.indexOf('{')
           
-          if (firstBrace !== -1) {
+          // Try each occurrence of { until we find valid JSON
+          while (startIndex !== -1 && startIndex < jsonStr.length) {
             let braceCount = 0
             let inString = false
             let escapeNext = false
             let jsonEnd = -1
             
-            for (let i = firstBrace; i < contentText.length; i++) {
-              const char = contentText[i]
+            for (let i = startIndex; i < jsonStr.length; i++) {
+              const char = jsonStr[i]
               
               if (escapeNext) {
                 escapeNext = false
@@ -541,22 +544,33 @@ Return ONLY the JSON object, no additional text or markdown.`
             }
             
             if (jsonEnd !== -1) {
-              const jsonStr = contentText.substring(firstBrace, jsonEnd + 1)
-              console.log("Attempting to parse metrics JSON")
-              const parsed = JSON.parse(jsonStr)
+              const candidateJson = jsonStr.substring(startIndex, jsonEnd + 1)
+              console.log("Attempting to parse metrics JSON candidate")
               
-              if (parsed.metrics && Array.isArray(parsed.metrics)) {
-                console.log("Successfully parsed metrics JSON with", parsed.metrics.length, "metrics")
-                return parsed
+              try {
+                const parsed = JSON.parse(candidateJson)
+                
+                if (parsed.metrics && Array.isArray(parsed.metrics)) {
+                  console.log("✅ Successfully parsed metrics JSON with", parsed.metrics.length, "metrics")
+                  return parsed
+                } else {
+                  console.log("Parsed JSON but no metrics array, keys:", Object.keys(parsed))
+                }
+              } catch (parseError) {
+                console.log("Failed to parse this JSON candidate, trying next...")
               }
             }
+            
+            startIndex = jsonStr.indexOf('{', startIndex + 1)
           }
-        } catch (jsonError) {
-          console.warn("Failed to parse metrics as JSON, using fallback:", jsonError)
+          
+          console.warn("Exhausted all metrics JSON candidates")
+        } catch (error) {
+          console.warn("Error during metrics JSON extraction:", error)
         }
       }
 
-      console.warn("No metrics found in response, using mock data")
+      console.warn("❌ No metrics found in response, using mock data")
       return await this.mockAnalyzeMetrics(request)
     } catch (error) {
       console.error("Failed to parse metrics AI response:", error)
