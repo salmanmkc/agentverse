@@ -7,6 +7,7 @@ An intelligent task management system with AI-powered task breakdown, team match
 - 🎯 **Smart Task Creation** - AI generates actionable subtasks from descriptions
 - 📊 **Metric Analysis** - Understand task impact, urgency, and complexity
 - 🤝 **Intelligent Matching** - AI matches team members to subtasks based on skills
+- 👯 **Digital Twins** - Personalised agents finetuned to each team member's preferences, workplace style, and reactions
 - 📈 **Visual Dashboard** - Track tasks, progress, and team performance
 - 🔄 **GitHub Integration** - Automatically create issues and manage projects
 - 🎨 **Modern UI** - Beautiful, responsive interface with smooth animations
