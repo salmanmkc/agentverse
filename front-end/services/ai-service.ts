@@ -579,17 +579,192 @@ Provide realistic values (0-100) based on the task and subtasks. Generate exactl
   }
 
   /**
-   * Find user matches for subtask
+   * Find user matches for subtask using GitHub MCP
    * API Endpoint: POST /matching/find-candidates
    */
   async findMatches(
     request: FindMatchesRequest
   ): Promise<FindMatchesResponse> {
+    console.log('findMatches called:', { useMock: this.useMock, request })
+    
     if (this.useMock) {
+      console.log('Using mock data for team matching')
       return this.mockFindMatches(request)
     }
 
-    return apiClient.post<FindMatchesResponse>("/matching/find-candidates", request)
+    console.log('Calling platform-engineer-p2p for team matching with GitHub MCP')
+    
+    // Call the AI platform engineering backend using streaming API
+    // The AI will use GitHub MCP to analyze PRs and issues
+    const githubRepo = request.githubRepo || 'salmanmkc/agentverse'
+    
+    const prompt = `Find team members for: "${request.subtask.title}"
+
+Subtask: ${request.subtask.description}
+Context: ${request.taskTitle}
+
+Known Team Members:
+1. Joeclinton1 (Joe Clinton) - AI specialist, GitHub: @Joeclinton1
+2. khoinguyenpham04 (Noah/Pham Tran Khoi Nguyen) - Front End specialist, GitHub: @khoinguyenpham04
+3. ryanlin10 - Fine tuning models specialist, GitHub: @ryanlin10
+4. sul31man - Agentic to agentic specialist, GitHub: @sul31man
+
+Match these team members to the subtask based on their specialties. Use GitHub MCP ONLY if you need to verify activity levels.
+
+Return ONLY JSON (no markdown):
+{
+  "matches": [
+    {
+      "user": {"id": "Joeclinton1", "name": "Joe Clinton", "email": "joe@example.com", "avatar": "https://github.com/Joeclinton1.png", "skills": ["AI", "Machine Learning"], "engagement": {"completedTasks": 15, "avgResponseTime": 2, "activeSubtasks": 2, "totalContributions": 50}, "skillDistribution": []},
+      "matchPercentage": 90,
+      "confidence": 95,
+      "rank": 1,
+      "reasoning": "AI specialist, perfect match for this task",
+      "skillMatches": ["AI"],
+      "estimatedCompletionHours": ${request.subtask.estimatedHours || 8},
+      "githubActivity": {"openPRs": 1, "closedPRs": 20, "openIssues": 0, "closedIssues": 15}
+    }
+  ]
+}
+
+Return top 3 from the known team, ranks 1-3.`
+
+    try {
+      const fullResponse = await this.sendStreamingMessage(prompt)
+      
+      // Parse the AI response
+      return this.parseMatchesFromStream(fullResponse, request)
+    } catch (error) {
+      console.error("Failed to call AI backend for team matching:", error)
+      // Fallback to mock data on error
+      return this.mockFindMatches(request)
+    }
+  }
+
+  private async parseMatchesFromStream(
+    fullResponse: string,
+    request: FindMatchesRequest
+  ): Promise<FindMatchesResponse> {
+    try {
+      console.log("Parsing team matching AI response, length:", fullResponse.length)
+      console.log("Response preview:", fullResponse.substring(0, 300))
+
+      // Parse SSE (Server-Sent Events) format
+      const lines = fullResponse.split('\n')
+      let contentText = ''
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const jsonData = JSON.parse(line.substring(6))
+            
+            if (jsonData.result?.artifact) {
+              const artifact = jsonData.result.artifact
+              if (artifact.parts) {
+                for (const part of artifact.parts) {
+                  if (part.kind === 'text' && part.text) {
+                    contentText += part.text
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            continue
+          }
+        }
+      }
+
+      console.log("Extracted matches content length:", contentText.length)
+      console.log("Extracted matches content:", contentText)
+
+      // Try to extract and parse JSON from the content
+      let jsonStr = contentText.trim()
+      
+      // Remove markdown code blocks if present
+      if (jsonStr.includes('```')) {
+        const codeBlockMatch = jsonStr.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
+        if (codeBlockMatch) {
+          jsonStr = codeBlockMatch[1]
+          console.log("Extracted JSON from markdown code block")
+        }
+      }
+      
+      // Try to find JSON object in the text
+      if (jsonStr.includes("{") && jsonStr.includes("matches")) {
+        try {
+          let startIndex = jsonStr.indexOf('{')
+          
+          // Try each occurrence of { until we find valid JSON
+          while (startIndex !== -1 && startIndex < jsonStr.length) {
+            let braceCount = 0
+            let inString = false
+            let escapeNext = false
+            let jsonEnd = -1
+            
+            for (let i = startIndex; i < jsonStr.length; i++) {
+              const char = jsonStr[i]
+              
+              if (escapeNext) {
+                escapeNext = false
+                continue
+              }
+              
+              if (char === '\\') {
+                escapeNext = true
+                continue
+              }
+              
+              if (char === '"' && !escapeNext) {
+                inString = !inString
+                continue
+              }
+              
+              if (!inString) {
+                if (char === '{') {
+                  braceCount++
+                } else if (char === '}') {
+                  braceCount--
+                  if (braceCount === 0) {
+                    jsonEnd = i
+                    break
+                  }
+                }
+              }
+            }
+            
+            if (jsonEnd !== -1) {
+              const candidateJson = jsonStr.substring(startIndex, jsonEnd + 1)
+              console.log("Attempting to parse matches JSON candidate")
+              
+              try {
+                const parsed = JSON.parse(candidateJson)
+                
+                if (parsed.matches && Array.isArray(parsed.matches)) {
+                  console.log("✅ Successfully parsed matches JSON with", parsed.matches.length, "matches")
+                  return parsed
+                } else {
+                  console.log("Parsed JSON but no matches array, keys:", Object.keys(parsed))
+                }
+              } catch (parseError) {
+                console.log("Failed to parse this JSON candidate, trying next...")
+              }
+            }
+            
+            startIndex = jsonStr.indexOf('{', startIndex + 1)
+          }
+          
+          console.warn("Exhausted all matches JSON candidates")
+        } catch (error) {
+          console.warn("Error during matches JSON extraction:", error)
+        }
+      }
+
+      console.warn("❌ No matches found in response, using mock data")
+      return await this.mockFindMatches(request)
+    } catch (error) {
+      console.error("Failed to parse matches AI response:", error)
+      return await this.mockFindMatches(request)
+    }
   }
 
   /**
@@ -748,11 +923,19 @@ Provide realistic values (0-100) based on the task and subtasks. Generate exactl
     const matches: MatchCandidate[] = top3.map((item, index) => ({
       user: item.user,
       matchPercentage: Math.round(item.score),
+      confidence: Math.round(item.score * 0.9), // Slightly lower confidence
       rank: (index + 1) as 1 | 2 | 3,
       reasoning: this.generateReasoning(item.user, request.subtask, item.score),
       skillMatches: item.user.skills.filter((skill) =>
         subtaskLower.includes(skill.toLowerCase())
       ),
+      estimatedCompletionHours: Math.round((request.subtask.estimatedHours || 8) * (1 + (index * 0.15))),
+      githubActivity: {
+        openPRs: Math.floor(Math.random() * 3),
+        closedPRs: 10 + Math.floor(Math.random() * 20),
+        openIssues: Math.floor(Math.random() * 2),
+        closedIssues: 15 + Math.floor(Math.random() * 25),
+      },
     }))
 
     return { matches }
