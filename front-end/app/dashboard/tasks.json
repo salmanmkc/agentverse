@@ -1,0 +1,176 @@
+[
+  {
+    "id": "task_1762076493209",
+    "title": "Build auth",
+    "description": "nanksandsa",
+    "priority": "high",
+    "status": "open",
+    "tags": [],
+    "createdAt": "2025-11-02T09:41:33.209Z",
+    "updatedAt": "2025-11-02T09:41:33.209Z",
+    "subtasks": [
+      {
+        "id": "st-1762076435014-1",
+        "title": "Research and planning for Build auth",
+        "description": "Conduct initial research and create detailed plan for implementing Build auth. Identify requirements and potential challenges.",
+        "status": "todo",
+        "assignedTo": [],
+        "createdAt": "2025-11-02T09:40:35.014Z",
+        "updatedAt": "2025-11-02T09:40:35.014Z",
+        "estimatedHours": 8,
+        "completed": false
+      },
+      {
+        "id": "st-1762076435014-2",
+        "title": "Core implementation",
+        "description": "Implement the main functionality described in: nanksandsa",
+        "status": "todo",
+        "assignedTo": [],
+        "createdAt": "2025-11-02T09:40:35.014Z",
+        "updatedAt": "2025-11-02T09:40:35.014Z",
+        "estimatedHours": 20,
+        "children": [
+          {
+            "id": "st-1762076443607-1",
+            "title": "Research and planning for Core implementation",
+            "description": "Conduct initial research and create detailed plan for implementing Core implementation. Identify requirements and potential challenges.",
+            "status": "open",
+            "assignedTo": [],
+            "createdAt": "2025-11-02T09:40:43.607Z",
+            "updatedAt": "2025-11-02T09:40:43.607Z",
+            "estimatedHours": 8
+          },
+          {
+            "id": "st-1762076443607-2",
+            "title": "Core implementation",
+            "description": "Implement the main functionality described in: Implement the main functionality described in: nanksandsa",
+            "status": "open",
+            "assignedTo": [],
+            "createdAt": "2025-11-02T09:40:43.607Z",
+            "updatedAt": "2025-11-02T09:40:43.607Z",
+            "estimatedHours": 20
+          },
+          {
+            "id": "st-1762076443607-3",
+            "title": "Testing and quality assurance",
+            "description": "Write comprehensive tests and perform QA to ensure quality of Core implementation",
+            "status": "open",
+            "assignedTo": [],
+            "createdAt": "2025-11-02T09:40:43.607Z",
+            "updatedAt": "2025-11-02T09:40:43.607Z",
+            "estimatedHours": 12
+          },
+          {
+            "id": "st-1762076443607-4",
+            "title": "Documentation and deployment",
+            "description": "Create documentation and deploy Core implementation to production environment",
+            "status": "open",
+            "assignedTo": [],
+            "createdAt": "2025-11-02T09:40:43.607Z",
+            "updatedAt": "2025-11-02T09:40:43.607Z",
+            "estimatedHours": 6
+          }
+        ],
+        "completed": false
+      },
+      {
+        "id": "st-1762076435014-3",
+        "title": "Testing and quality assurance",
+        "description": "Write comprehensive tests and perform QA to ensure quality of Build auth",
+        "status": "todo",
+        "assignedTo": [],
+        "createdAt": "2025-11-02T09:40:35.014Z",
+        "updatedAt": "2025-11-02T09:40:35.014Z",
+        "estimatedHours": 12,
+        "children": [
+          {
+            "id": "st-1762076439606-1",
+            "title": "Research and planning for Testing and quality assurance",
+            "description": "Conduct initial research and create detailed plan for implementing Testing and quality assurance. Identify requirements and potential challenges.",
+            "status": "open",
+            "assignedTo": [],
+            "createdAt": "2025-11-02T09:40:39.606Z",
+            "updatedAt": "2025-11-02T09:40:39.606Z",
+            "estimatedHours": 8
+          },
+          {
+            "id": "st-1762076439606-2",
+            "title": "Core implementation",
+            "description": "Implement the main functionality described in: Write comprehensive tests and perform QA to ensure quality of Build auth",
+            "status": "open",
+            "assignedTo": [],
+            "createdAt": "2025-11-02T09:40:39.606Z",
+            "updatedAt": "2025-11-02T09:40:39.606Z",
+            "estimatedHours": 20
+          },
+          {
+            "id": "st-1762076439606-3",
+            "title": "Testing and quality assurance",
+            "description": "Write comprehensive tests and perform QA to ensure quality of Testing and quality assurance",
+            "status": "open",
+            "assignedTo": [],
+            "createdAt": "2025-11-02T09:40:39.606Z",
+            "updatedAt": "2025-11-02T09:40:39.606Z",
+            "estimatedHours": 12
+          },
+          {
+            "id": "st-1762076439606-4",
+            "title": "Documentation and deployment",
+            "description": "Create documentation and deploy Testing and quality assurance to production environment",
+            "status": "open",
+            "assignedTo": [],
+            "createdAt": "2025-11-02T09:40:39.606Z",
+            "updatedAt": "2025-11-02T09:40:39.606Z",
+            "estimatedHours": 6
+          }
+        ],
+        "completed": false
+      },
+      {
+        "id": "st-1762076435014-4",
+        "title": "Documentation and deployment",
+        "description": "Create documentation and deploy Build auth to production environment",
+        "status": "todo",
+        "assignedTo": [],
+        "createdAt": "2025-11-02T09:40:35.014Z",
+        "updatedAt": "2025-11-02T09:40:35.014Z",
+        "estimatedHours": 6,
+        "completed": false
+      }
+    ],
+    "metrics": [
+      {
+        "metric": "Impact",
+        "value": 75,
+        "description": "This task will significantly affect the system and users",
+        "category": "impact"
+      },
+      {
+        "metric": "Urgency",
+        "value": 70,
+        "description": "Time sensitivity based on project timeline",
+        "category": "urgency"
+      },
+      {
+        "metric": "Complexity",
+        "value": 85,
+        "description": "Technical complexity and skill requirements",
+        "category": "complexity"
+      },
+      {
+        "metric": "Dependencies",
+        "value": 80,
+        "description": "Number of other tasks and systems this affects",
+        "category": "dependencies"
+      },
+      {
+        "metric": "Risk",
+        "value": 55,
+        "description": "Potential risks and uncertainty involved",
+        "category": "risk"
+      }
+    ],
+    "allocations": {},
+    "estimatedHours": 46
+  }
+]
