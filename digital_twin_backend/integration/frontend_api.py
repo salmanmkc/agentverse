@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocke
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
+from pathlib import Path
 
 from digital_twin_backend.communication.shared_knowledge import (
     SharedKnowledgeBase, 
@@ -79,6 +80,26 @@ class SystemStatusResponse(BaseModel):
     last_updated: datetime
 
 
+class AgentDirectoryItem(BaseModel):
+    """Agent directory entry"""
+    agent_id: str
+    person_name: str
+    role: str  # manager | worker
+
+
+class AgentDirectoryResponse(BaseModel):
+    """Directory of agents with counts"""
+    total_agents: int
+    total_workers: int
+    agents: List[AgentDirectoryItem]
+    last_updated: datetime
+
+
+class UpdateAgentNameRequest(BaseModel):
+    """Payload to rename an agent"""
+    person_name: str = Field(..., min_length=1)
+
+
 class FrontendIntegrationAPI:
     """Main API class for frontend integration"""
     
@@ -136,6 +157,8 @@ class FrontendIntegrationAPI:
         self.app.get("/api/agents")(self.get_agents)
         self.app.get("/api/agents/{agent_id}")(self.get_agent_status)
         self.app.put("/api/agents/{agent_id}/availability")(self.update_agent_availability)
+        self.app.get("/api/agents/directory", response_model=AgentDirectoryResponse)(self.get_agent_directory)
+        self.app.put("/api/agents/{agent_id}/name")(self.update_agent_name)
         
         # Frontend data sync routes
         self.app.get("/api/dashboard/data")(self.get_dashboard_data)
@@ -193,7 +216,10 @@ class FrontendIntegrationAPI:
                         agent_id,
                         worker.receive_message
                     )
-            
+
+            # Apply any saved names
+            self._apply_saved_agent_profiles()
+
             self.agents_initialized = True
             
             print(f"✅ System initialized with {len(self.worker_agents)} worker agents")
@@ -575,6 +601,118 @@ class FrontendIntegrationAPI:
         await agent.update_availability(new_status, max_capacity)
         
         return {"message": "Agent availability updated", "status": "success"}
+
+    async def get_agent_directory(self) -> 'AgentDirectoryResponse':
+        """Return a directory of agents with names and counts"""
+        if not self.agents_initialized:
+            raise HTTPException(status_code=503, detail="System not initialized")
+
+        items: List[AgentDirectoryItem] = []
+        # Include manager if present
+        if self.manager_agent is not None:
+            items.append(AgentDirectoryItem(
+                agent_id="manager",
+                person_name=self.manager_agent.person_name,
+                role="manager"
+            ))
+
+        # Include workers
+        for aid, agent in self.worker_agents.items():
+            items.append(AgentDirectoryItem(
+                agent_id=aid,
+                person_name=agent.person_name,
+                role="worker"
+            ))
+
+        return AgentDirectoryResponse(
+            total_agents=len(items),
+            total_workers=len(self.worker_agents),
+            agents=items,
+            last_updated=datetime.now()
+        )
+
+    async def update_agent_name(self, agent_id: str, payload: 'UpdateAgentNameRequest') -> Dict[str, Any]:
+        """Update an agent's display name and persist it"""
+        if not self.agents_initialized:
+            raise HTTPException(status_code=503, detail="System not initialized")
+
+        new_name = payload.person_name.strip()
+        if not new_name:
+            raise HTTPException(status_code=400, detail="Name cannot be empty")
+
+        # Update runtime instances
+        if agent_id == "manager":
+            if not self.manager_agent:
+                raise HTTPException(status_code=404, detail="Manager not found")
+            self.manager_agent.person_name = new_name
+        elif agent_id in self.worker_agents:
+            self.worker_agents[agent_id].person_name = new_name
+        else:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        # Update config snapshot if present
+        if agent_id in AGENT_CONFIGS:
+            try:
+                AGENT_CONFIGS[agent_id].person_name = new_name
+            except Exception:
+                pass
+
+        # Persist to disk
+        self._save_agent_profiles()
+
+        return {"message": "Agent name updated", "status": "success", "agent_id": agent_id, "person_name": new_name}
+
+    # --- Agent profile persistence helpers ---
+    def _profiles_path(self) -> Path:
+        return Path(__file__).resolve().parents[1] / "data" / "agent_profiles.json"
+
+    def _load_agent_profiles(self) -> Dict[str, str]:
+        try:
+            path = self._profiles_path()
+            if path.exists():
+                return json.loads(path.read_text())
+        except Exception:
+            pass
+        return {}
+
+    def _save_agent_profiles(self) -> None:
+        try:
+            path = self._profiles_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            # Build mapping from current runtime
+            mapping: Dict[str, str] = {}
+            if self.manager_agent is not None:
+                mapping["manager"] = self.manager_agent.person_name
+            for aid, agent in self.worker_agents.items():
+                mapping[aid] = agent.person_name
+            path.write_text(json.dumps(mapping, indent=2))
+        except Exception:
+            # Non-fatal persistence failure
+            pass
+
+    def _apply_saved_agent_profiles(self) -> None:
+        mapping = self._load_agent_profiles()
+        if not mapping:
+            return
+        # Update manager
+        if "manager" in mapping and self.manager_agent is not None:
+            self.manager_agent.person_name = mapping["manager"]
+            if "manager" in AGENT_CONFIGS:
+                try:
+                    AGENT_CONFIGS["manager"].person_name = mapping["manager"]
+                except Exception:
+                    pass
+        # Update workers
+        for aid, name in mapping.items():
+            if aid == "manager":
+                continue
+            if aid in self.worker_agents:
+                self.worker_agents[aid].person_name = name
+            if aid in AGENT_CONFIGS:
+                try:
+                    AGENT_CONFIGS[aid].person_name = name
+                except Exception:
+                    pass
 
 
 # Factory function to create the API instance

@@ -150,11 +150,54 @@ python finetuning.py train_all
 - `GET /api/agents` - List all agents and their status
 - `GET /api/agents/{agent_id}` - Get specific agent status
 - `PUT /api/agents/{agent_id}/availability` - Update agent availability
+- `GET /api/agents/directory` - Get agent directory (count + names)
+- `PUT /api/agents/{agent_id}/name` - Rename an agent `{ "person_name": "New Name" }`
+
+Example:
+```bash
+# List agent directory
+curl http://localhost:8000/api/agents/directory
+
+# Rename an agent
+curl -X PUT http://localhost:8000/api/agents/agent_1/name \
+  -H "Content-Type: application/json" \
+  -d '{"person_name": "Alex Doe"}'
+```
 
 ### Frontend Integration
 - `GET /api/dashboard/data` - Get data in frontend format
 - `POST /api/dashboard/sync` - Sync data from frontend
 - `WebSocket /ws` - Real-time updates
+
+## 🔌 MCP Server (Optional)
+
+Expose the same agent/task controls over the Model Context Protocol (MCP) for programmatic clients.
+
+### Install and Run
+
+```bash
+pip install mcp
+python -m digital_twin_backend.mcp.server
+```
+
+The server communicates over stdio. Use an MCP-compatible client to connect.
+
+### Available Tools
+- initialize_system()
+- get_system_status()
+- create_task(title, description, task_type, priority, estimated_hours, deadline?, required_skills?)
+- get_tasks(status?)
+- get_task(task_id)
+- assign_task(task_id, agent_id?)
+- update_task_status(task_id, status)
+- get_agents()
+- get_agent_status(agent_id)
+- get_agent_directory()
+- update_agent_name(agent_id, person_name)
+
+Notes:
+- Runs without FastAPI; uses the same underlying agents and shared knowledge.
+- If Redis is available (per settings), persistence/pubsub is enabled; otherwise in-memory.
 
 ## 🎭 Agent Personalities
 

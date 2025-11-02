@@ -245,6 +245,14 @@ curl -X POST http://localhost:8000/api/tasks \
 
 # Check task assignment
 curl http://localhost:8000/api/tasks
+
+# View agent directory (count + names)
+curl http://localhost:8000/api/agents/directory
+
+# Rename an agent and persist to disk (data/agent_profiles.json)
+curl -X PUT http://localhost:8000/api/agents/agent_1/name \
+  -H "Content-Type: application/json" \
+  -d '{"person_name": "Alex Doe"}'
 ```
 
 ### 6.4 Connect Your Frontend
