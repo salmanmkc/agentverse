@@ -15,7 +15,7 @@ services:
     # Each agent is marked with 'required: false', so platform-engineer will start even if the agent is missing.
     # 'condition: service_started' means Docker Compose will wait until the service has started (not necessarily healthy) before starting platform-engineer.
     depends_on:
-      # - agent-github-p2p
+      - agent-github-p2p
       - agent_rag
       - agent-slack-p2p
       - agent-weather-p2p
@@ -31,7 +31,7 @@ services:
       - A2A_TRANSPORT=p2p # Use A2A protocol for agent-to-agent communication.
 
       # Agent hosts
-      # - GITHUB_AGENT_HOST=agent-github-p2p
+      - GITHUB_AGENT_HOST=agent-github-p2p
       - SLACK_AGENT_HOST=agent-slack-p2p
       - WEATHER_AGENT_HOST=agent-weather-p2p
       - WEBEX_AGENT_HOST=agent-webex-p2p
@@ -58,24 +58,24 @@ services:
   ####################################################################################################
   #                                      AGENT GITHUB A2A P2P                                        #
   # ####################################################################################################
-  # agent-github-p2p:
-  #   image: ghcr.io/cnoe-io/agent-github:0.2.0
-  #   container_name: agent-github-p2p
-  #   profiles:
-  #     - p2p
-  #     - p2p-tracing
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #   env_file:
-  #     - .env
-  #   ports:
-  #     - "8007:8000"
-  #   environment:
-  #     - A2A_TRANSPORT=p2p
-  #     - MCP_MODE=${MCP_MODE:-http}
-  #     - ENABLE_TRACING=${ENABLE_TRACING:-false}
-  #     - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
-  #     - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+  agent-github-p2p:
+    image: ghcr.io/cnoe-io/agent-github:0.2.0
+    container_name: agent-github-p2p
+    profiles:
+      - p2p
+      - p2p-tracing
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    env_file:
+      - .env
+    ports:
+      - "8007:8000"
+    environment:
+      - A2A_TRANSPORT=p2p
+      - MCP_MODE=${MCP_MODE:-http}
+      - ENABLE_TRACING=${ENABLE_TRACING:-false}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
 
   ####################################################################################################
   #                                      AGENT SLACK A2A P2P                                         #

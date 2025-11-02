@@ -35,9 +35,13 @@ export interface FindMatchesResponse {
 
 export interface CreateGitHubIssuesRequest {
   taskTitle: string
+  taskDescription?: string
   subtasks: Array<{
     subtaskId: string
-    assignedUserId: string
+    subtaskTitle: string
+    subtaskDescription: string
+    assignedUserId: string // GitHub username from User.id
+    estimatedHours?: number
   }>
   repository?: string
   projectBoard?: string

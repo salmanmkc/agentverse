@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { IconArrowLeft, IconX } from "@tabler/icons-react"
 import { motion, AnimatePresence } from "motion/react"
 import { taskService } from "@/services/task-service"
+import { aiService } from "@/services/ai-service"
 import { toast } from "sonner"
 
 interface TaskCreationModalProps {
@@ -35,27 +36,51 @@ export function TaskCreationModal({
   })
   const [isCreating, setIsCreating] = useState(false)
 
+  const handleCreateTask = async () => {
+    setIsCreating(true)
+    try {
+      // Build subtasks with assignees
+      const subtasks = state.generatedSubtasks.map((subtask) => {
+        const allocation = state.finalAllocations.get(subtask.id)
+        return {
+          subtaskId: subtask.id,
+          subtaskTitle: subtask.title,
+          subtaskDescription: subtask.description,
+          assignedUserId: allocation?.id || "",
+          estimatedHours: subtask.estimatedHours,
+        }
+      })
+
+      // Send prompt to AI backend to create GitHub issues using MCP
+      await aiService.createGitHubIssues({
+        repository: state.task.githubRepository || "salmanmkc/agentverse",
+        taskTitle: state.task.title || "",
+        taskDescription: state.task.description || "",
+        subtasks,
+      })
+
+      toast.success("GitHub issues created!", {
+        description: `Created ${subtasks.length} issues in ${state.task.githubRepository || "salmanmkc/agentverse"}`,
+      })
+      
+      onComplete(state)
+      onClose()
+    } catch (error) {
+      console.error("Failed to create GitHub issues:", error)
+      toast.error("Failed to create GitHub issues", {
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred.",
+      })
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
   const handleNext = async () => {
     if (state.step < 5) {
       setState({ ...state, step: (state.step + 1) as 1 | 2 | 3 | 4 | 5 })
     } else {
-      setIsCreating(true)
-      try {
-        const newTask = await taskService.createTask(state)
-        toast.success("Task created successfully!", {
-          description: `Task "${newTask.title}" has been added.`,
-        })
-        onComplete(state)
-        onClose()
-      } catch (error) {
-        console.error("Failed to create task:", error)
-        toast.error("Failed to create task", {
-          description:
-            error instanceof Error ? error.message : "An unknown error occurred.",
-        })
-      } finally {
-        setIsCreating(false)
-      }
+      await handleCreateTask()
     }
   }
 
@@ -148,7 +173,12 @@ export function TaskCreationModal({
                 <Step4Matching state={state} updateState={updateState} />
               )}
               {state.step === 5 && (
-                <Step5Allocation state={state} updateState={updateState} />
+                <Step5Allocation 
+                  state={state} 
+                  updateState={updateState} 
+                  onCreateTask={handleCreateTask}
+                  isCreating={isCreating}
+                />
               )}
             </motion.div>
           </AnimatePresence>

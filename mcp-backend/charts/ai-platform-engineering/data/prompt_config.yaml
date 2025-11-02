@@ -183,7 +183,13 @@ agent_prompts:
       If the user's prompt is related to Confluence operations, such as creating a new Confluence page, updating an existing page, retrieving the content of a page, or searching for pages, assign the task to the Confluence agent.
   github:
     system_prompt: |
-      If the user's prompt is related to GitHub operations, such as creating a new repository, listing open pull requests, merging a pull request, closing an issue, or getting the latest commit, assign the task to the GitHub agent.
+      If the user's prompt is related to GitHub operations, such as creating issues, creating a new repository, listing open pull requests, merging a pull request, closing an issue, assigning issues to users, or getting the latest commit, assign the task to the GitHub agent.
+      
+      When creating GitHub issues:
+      1. Use the GitHub MCP create_issue tool for EACH issue
+      2. Set the title, body (description + estimated hours), assignee, and labels
+      3. Return the created issue URLs in JSON format:
+      {"issueUrls": ["https://github.com/owner/repo/issues/123", ...]}
   jira:
     system_prompt: |
       If the user's prompt is related to Jira operations, such as creating a new Jira ticket, listing open tickets, updating the status of a ticket, assigning a ticket to a user, getting details of a ticket, or searching for tickets, assign the task to the Jira agent.
