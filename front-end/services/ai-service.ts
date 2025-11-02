@@ -40,10 +40,120 @@ class AIService {
       return this.mockGenerateSubtasks(request)
     }
 
-    return apiClient.post<GenerateSubtasksResponse>(
-      "/tasks/generate-subtasks",
-      request
-    )
+    // Call the AI platform engineering backend using JSON-RPC format
+    const prompt = `Generate subtasks for the following task:
+
+Title: ${request.title}
+Description: ${request.description}
+
+Please provide a GenerateSubtasksResponse with an array of subtasks. Each subtask should have:
+- id: A unique identifier
+- title: A clear, concise title
+- description: Detailed description of what needs to be done
+- status: "todo"
+- assignedTo: Empty array
+- createdAt: Current ISO timestamp
+- updatedAt: Current ISO timestamp
+- estimatedHours: Estimated hours to complete
+- completed: false
+
+Return the response in JSON format matching the GenerateSubtasksResponse type with a "subtasks" array.`
+
+    try {
+      const response = await apiClient.post<any>("", {
+        id: `generate-subtasks-${Date.now()}`,
+        method: "message/send",
+        params: {
+          message: {
+            role: "user",
+            parts: [
+              {
+                kind: "text",
+                text: prompt,
+              },
+            ],
+            messageId: `msg-${Date.now()}`,
+          },
+        },
+      })
+
+      // Parse the AI response and format it as GenerateSubtasksResponse
+      return this.parseSubtasksResponse(response, request)
+    } catch (error) {
+      console.error("Failed to call AI backend:", error)
+      // Fallback to mock data on error
+      return this.mockGenerateSubtasks(request)
+    }
+  }
+
+  private async parseSubtasksResponse(
+    response: any,
+    request: GenerateSubtasksRequest
+  ): Promise<GenerateSubtasksResponse> {
+    try {
+      // Extract text from JSON-RPC response
+      let fullText = ""
+
+      if (response.result?.artifacts) {
+        // Find the partial_result or streaming_result artifact
+        const resultArtifact = response.result.artifacts.find(
+          (a: any) =>
+            a.name === "partial_result" || a.name === "streaming_result"
+        )
+
+        if (resultArtifact?.parts) {
+          // Combine all text parts
+          fullText = resultArtifact.parts
+            .filter((p: any) => p.kind === "text")
+            .map((p: any) => p.text)
+            .join("")
+        }
+      }
+
+      // Try to parse as JSON if it looks like JSON
+      if (fullText.includes("{") && fullText.includes("subtasks")) {
+        const jsonMatch = fullText.match(/\{[\s\S]*"subtasks"[\s\S]*\}/g)
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0])
+          if (parsed.subtasks && Array.isArray(parsed.subtasks)) {
+            return parsed
+          }
+        }
+      }
+
+      // Parse the natural language response into subtasks
+      const lines = fullText.split("\n").filter((l) => l.trim())
+      const subtasks: Subtask[] = []
+
+      lines.forEach((line, index) => {
+        // Look for numbered items like "1.", "2.", etc.
+        const match = line.match(/^\d+\.\s*(.+)/)
+        if (match) {
+          subtasks.push({
+            id: `st-${Date.now()}-${index}`,
+            title: match[1].trim(),
+            description: match[1].trim(),
+            status: "todo",
+            assignedTo: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            estimatedHours: 8,
+            completed: false,
+          })
+        }
+      })
+
+      if (subtasks.length > 0) {
+        return { subtasks }
+      }
+
+      // Fallback to mock data if no subtasks found
+      return await this.mockGenerateSubtasks(request)
+    } catch (error) {
+      console.error("Failed to parse AI response:", error)
+      // Fallback to mock data if parsing fails
+      return await this.mockGenerateSubtasks(request)
+    }
   }
 
   /**
@@ -107,41 +217,45 @@ class AIService {
         id: `st-${Date.now()}-1`,
         title: `Research and planning for ${request.title}`,
         description: `Conduct initial research and create detailed plan for implementing ${request.title}. Identify requirements and potential challenges.`,
-        status: "open",
+        status: "todo",
         assignedTo: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         estimatedHours: 8,
+        completed: false,
       },
       {
         id: `st-${Date.now()}-2`,
         title: `Core implementation`,
         description: `Implement the main functionality described in: ${request.description}`,
-        status: "open",
+        status: "todo",
         assignedTo: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         estimatedHours: 20,
+        completed: false,
       },
       {
         id: `st-${Date.now()}-3`,
         title: `Testing and quality assurance`,
         description: `Write comprehensive tests and perform QA to ensure quality of ${request.title}`,
-        status: "open",
+        status: "todo",
         assignedTo: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         estimatedHours: 12,
+        completed: false,
       },
       {
         id: `st-${Date.now()}-4`,
         title: `Documentation and deployment`,
         description: `Create documentation and deploy ${request.title} to production environment`,
-        status: "open",
+        status: "todo",
         assignedTo: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         estimatedHours: 6,
+        completed: false,
       },
     ]
 

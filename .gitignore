@@ -119,9 +119,8 @@ Thumbs.db
 # Git LFS tracked files (keeping patterns for reference)
 # *.db files are tracked by LFS as per .gitattributes
 
-# Neo4j database files
-mcp-backend/volumes/neo4j-ontology/data/
-mcp-backend/volumes/neo4j/data/
+# Docker volumes (all runtime data)
+mcp-backend/volumes/
 
 # Large binary files and datasets
 *.transaction.db.*
