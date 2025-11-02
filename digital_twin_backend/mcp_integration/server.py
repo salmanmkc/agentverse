@@ -41,7 +41,7 @@ API Key Management:
 
 Run:
   pip install mcp
-  python -m digital_twin_backend.mcp.server
+  python -m digital_twin_backend.mcp_integration.server
 
 Notes:
 - Works in-memory by default; if Redis is running, shared knowledge and

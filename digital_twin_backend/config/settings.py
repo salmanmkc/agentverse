@@ -32,6 +32,11 @@ class Settings:
         self.MODELS_DIR = os.getenv("MODELS_DIR", "./models")
         self.MAX_CONTEXT_LENGTH = int(os.getenv("MAX_CONTEXT_LENGTH", "1024"))
         
+        # OpenAI Settings (for fine-tuned models)
+        self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+        self.OPENAI_MODEL_NAME = os.getenv("OPENAI_MODEL_NAME", "gpt-3.5-turbo")
+        self.OPENAI_ORG_ID = os.getenv("OPENAI_ORG_ID", "")
+        
         # Agent Settings
         self.MANAGER_AGENT_ID = "manager"
         self.WORKER_AGENT_IDS = ["agent_1", "agent_2", "agent_3", "agent_4", "agent_5"]

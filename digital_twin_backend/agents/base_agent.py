@@ -68,13 +68,21 @@ class DigitalTwinAgent(ABC):
         person_name: str, 
         shared_knowledge: SharedKnowledgeBase,
         capabilities: AgentCapabilities,
-        model_path: Optional[str] = None
+        model_path: Optional[str] = None,
+        use_api_model: bool = False,
+        api_provider: str = "openai",
+        api_model: str = "gpt-3.5-turbo"
     ):
         self.agent_id = agent_id
         self.person_name = person_name
         self.shared_knowledge = shared_knowledge
         self.capabilities = capabilities
         self.model_path = model_path
+        
+        # API Model settings
+        self.use_api_model = use_api_model
+        self.api_provider = api_provider
+        self.api_model = api_model
         
         # Model components
         self.tokenizer: Optional[AutoTokenizer] = None
@@ -159,6 +167,11 @@ class DigitalTwinAgent(ABC):
     
     async def generate_response(self, prompt: str, context: Dict[str, Any] = None) -> str:
         """Generate a response using the agent's personality model"""
+        
+        # Use API model if configured
+        if self.use_api_model:
+            return await self._generate_api_response(prompt, context or {})
+        
         if not self.is_model_loaded:
             # Fallback response based on agent capabilities and context
             return await self._generate_fallback_response(prompt, context or {})
@@ -224,6 +237,94 @@ Current situation:
             personality_context += f"\nTask under discussion:\n{context['task_info']}\n"
         
         return f"{personality_context}\n\nPlease respond as {self.person_name} would: {prompt}"
+    
+    async def _generate_api_response(self, prompt: str, context: Dict[str, Any]) -> str:
+        """Generate response using API (OpenAI, Anthropic, etc.)"""
+        try:
+            from digital_twin_backend.config.settings import settings
+            from digital_twin_backend.config.api_keys import api_key_manager
+            
+            # Get API key
+            api_key = api_key_manager.get_key(self.api_provider)
+            if not api_key:
+                print(f"⚠️  No API key for {self.api_provider}, using fallback")
+                return await self._generate_fallback_response(prompt, context)
+            
+            # Build contextual prompt
+            full_prompt = self._build_contextual_prompt(prompt, context)
+            
+            # Call OpenAI API
+            if self.api_provider == "openai":
+                import openai
+                
+                client = openai.OpenAI(api_key=api_key)
+                
+                # Check if it's an Assistant (starts with 'asst_')
+                if self.api_model.startswith('asst_'):
+                    # Use OpenAI Assistants API
+                    thread = client.beta.threads.create()
+                    
+                    # Add message to thread
+                    client.beta.threads.messages.create(
+                        thread_id=thread.id,
+                        role="user",
+                        content=full_prompt
+                    )
+                    
+                    # Run the assistant
+                    run = client.beta.threads.runs.create(
+                        thread_id=thread.id,
+                        assistant_id=self.api_model
+                    )
+                    
+                    # Wait for completion
+                    import time
+                    max_wait = 30  # seconds
+                    start_time = time.time()
+                    while run.status in ['queued', 'in_progress']:
+                        if time.time() - start_time > max_wait:
+                            return f"[Timeout] Assistant took too long to respond."
+                        time.sleep(0.5)
+                        run = client.beta.threads.runs.retrieve(
+                            thread_id=thread.id,
+                            run_id=run.id
+                        )
+                    
+                    if run.status == 'completed':
+                        # Get the messages
+                        messages = client.beta.threads.messages.list(
+                            thread_id=thread.id,
+                            order='desc',
+                            limit=1
+                        )
+                        return messages.data[0].content[0].text.value.strip()
+                    else:
+                        return f"[Error] Assistant run failed with status: {run.status}"
+                else:
+                    # Use Chat Completions API for fine-tuned models
+                    response = client.chat.completions.create(
+                        model=self.api_model,
+                        messages=[
+                            {"role": "system", "content": f"You are {self.person_name}, a digital twin agent. Respond in character based on your personality and capabilities."},
+                            {"role": "user", "content": full_prompt}
+                        ],
+                        max_tokens=500,
+                        temperature=0.7
+                    )
+                    
+                    return response.choices[0].message.content.strip()
+            
+            # Add support for other providers (Anthropic, etc.) here
+            else:
+                print(f"⚠️  Provider {self.api_provider} not yet supported")
+                return await self._generate_fallback_response(prompt, context)
+                
+        except ImportError:
+            print(f"⚠️  OpenAI package not installed. Install with: pip install openai")
+            return await self._generate_fallback_response(prompt, context)
+        except Exception as e:
+            print(f"❌ API error for {self.agent_id}: {e}")
+            return await self._generate_fallback_response(prompt, context)
     
     async def _generate_fallback_response(self, prompt: str, context: Dict[str, Any]) -> str:
         """Generate fallback response when model is not available"""

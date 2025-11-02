@@ -26,7 +26,10 @@ class ManagerAgent(DigitalTwinAgent):
     def __init__(
         self, 
         shared_knowledge: SharedKnowledgeBase,
-        worker_agent_ids: List[str] = None
+        worker_agent_ids: List[str] = None,
+        use_api_model: bool = False,
+        api_provider: str = "openai",
+        api_model: str = "gpt-3.5-turbo"
     ):
         # Manager capabilities - focused on leadership and coordination
         manager_capabilities = AgentCapabilities(
@@ -54,7 +57,10 @@ class ManagerAgent(DigitalTwinAgent):
             person_name="Team Manager",  # This would be customized
             shared_knowledge=shared_knowledge,
             capabilities=manager_capabilities,
-            model_path=None  # Will be set when fine-tuned model is available
+            model_path=None,  # Will be set when fine-tuned model is available
+            use_api_model=use_api_model,
+            api_provider=api_provider,
+            api_model=api_model
         )
         
         self.worker_agent_ids = worker_agent_ids or settings.WORKER_AGENT_IDS

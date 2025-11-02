@@ -27,14 +27,20 @@ class WorkerAgent(DigitalTwinAgent):
         person_name: str,
         shared_knowledge: SharedKnowledgeBase,
         capabilities: AgentCapabilities,
-        model_path: Optional[str] = None
+        model_path: Optional[str] = None,
+        use_api_model: bool = False,
+        api_provider: str = "openai",
+        api_model: str = "gpt-3.5-turbo"
     ):
         super().__init__(
             agent_id=agent_id,
             person_name=person_name,
             shared_knowledge=shared_knowledge,
             capabilities=capabilities,
-            model_path=model_path
+            model_path=model_path,
+            use_api_model=use_api_model,
+            api_provider=api_provider,
+            api_model=api_model
         )
         
         # Worker-specific attributes

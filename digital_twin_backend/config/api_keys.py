@@ -27,7 +27,11 @@ class APIKeyManager:
     
     def __init__(self):
         self.keys_file = Path("data/api_keys.json")
-        self.keys_file.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            self.keys_file.parent.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, OSError):
+            # Fallback to current directory if can't create data dir
+            self.keys_file = Path("api_keys.json")
         self.keys: Dict[str, Dict] = self._load_keys()
     
     def _load_keys(self) -> Dict[str, Dict]:
