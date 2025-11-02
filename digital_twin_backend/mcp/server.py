@@ -5,17 +5,39 @@ Exposes tools via the Model Context Protocol (MCP) to control the
 Digital Twin Workplace backend without the FastAPI layer.
 
 Tools:
+System Management:
 - initialize_system()
 - get_system_status()
+
+Task Management:
 - create_task(title, description, task_type, priority, estimated_hours, deadline?, required_skills?)
 - get_tasks(status?)
 - get_task(task_id)
 - assign_task(task_id, agent_id?)
 - update_task_status(task_id, status)
+
+Agent Management:
 - get_agents()
 - get_agent_status(agent_id)
 - get_agent_directory()
 - update_agent_name(agent_id, person_name)
+
+Model Management:
+- list_available_models()
+- get_agent_model_info(agent_id)
+- update_agent_model(agent_id, model_path, reload=True)
+- configure_agent(agent_id, person_name?, model_path?, capabilities?)
+- reload_agent_model(agent_id)
+- set_base_model(base_model_name)
+
+API Key Management:
+- add_api_key(provider, api_key, label?)
+- list_api_keys()
+- remove_api_key(provider)
+- validate_api_key(provider)
+- get_api_key_status(provider)
+- configure_agent_with_api(agent_id, provider, model_name, person_name?)
+- list_supported_api_providers()
 
 Run:
   pip install mcp
@@ -25,6 +47,7 @@ Notes:
 - Works in-memory by default; if Redis is running, shared knowledge and
   protocol will use it automatically per settings.
 - Does not require FastAPI/Uvicorn.
+- Model management functions allow hot-swapping agent personalities
 """
 import asyncio
 import json
@@ -51,6 +74,7 @@ from digital_twin_backend.communication.protocol import AgentCommunicationProtoc
 from digital_twin_backend.agents.manager_agent import ManagerAgent
 from digital_twin_backend.agents.worker_agent import WorkerAgent
 from digital_twin_backend.config.settings import settings, AGENT_CONFIGS
+from digital_twin_backend.config.api_keys import api_key_manager
 
 
 # --- Global runtime state for the MCP server ---
@@ -331,6 +355,356 @@ def create_app() -> FastMCP:
                 pass
         _persist_agent_names()
         return {"message": "Renamed", "agent_id": agent_id, "person_name": person_name}
+
+    @app.tool()
+    async def list_available_models() -> Dict[str, Any]:
+        """List all trained models in the models directory."""
+        from pathlib import Path
+        
+        models_dir = Path(settings.MODELS_DIR)
+        if not models_dir.exists():
+            return {"models": [], "models_dir": str(models_dir), "message": "Models directory not found"}
+        
+        models = []
+        for model_dir in models_dir.iterdir():
+            if model_dir.is_dir() and not model_dir.name.startswith('.'):
+                model_info = {
+                    "name": model_dir.name,
+                    "path": str(model_dir),
+                    "has_config": (model_dir / "config.json").exists(),
+                    "has_adapter": (model_dir / "adapter_model.bin").exists() or (model_dir / "adapter_model.safetensors").exists(),
+                    "has_tokenizer": (model_dir / "tokenizer.json").exists() or (model_dir / "tokenizer_config.json").exists(),
+                    "size_mb": sum(f.stat().st_size for f in model_dir.rglob('*') if f.is_file()) / (1024 * 1024)
+                }
+                models.append(model_info)
+        
+        return {
+            "models": models,
+            "total": len(models),
+            "models_dir": str(models_dir)
+        }
+
+    @app.tool()
+    async def get_agent_model_info(agent_id: str) -> Dict[str, Any]:
+        """Get detailed model information for an agent."""
+        await ensure_initialized()
+        
+        if agent_id == "manager":
+            agent = STATE.manager
+        elif agent_id in STATE.workers:
+            agent = STATE.workers[agent_id]
+        else:
+            return {"error": "Agent not found", "agent_id": agent_id}
+        
+        return {
+            "agent_id": agent_id,
+            "person_name": agent.person_name,
+            "model_path": agent.model_path,
+            "model_loaded": agent.is_model_loaded,
+            "has_fine_tuned_model": agent.model_path is not None,
+            "using_fallback": not agent.is_model_loaded,
+            "capabilities": agent.capabilities.technical_skills if hasattr(agent.capabilities, 'technical_skills') else {}
+        }
+
+    @app.tool()
+    async def update_agent_model(
+        agent_id: str,
+        model_path: str,
+        reload: bool = True
+    ) -> Dict[str, Any]:
+        """Update the model path for a specific agent and optionally reload it."""
+        await ensure_initialized()
+        
+        if agent_id == "manager":
+            return {"error": "Cannot update manager model via this method", "agent_id": agent_id}
+        
+        if agent_id not in STATE.workers:
+            return {"error": "Agent not found", "agent_id": agent_id}
+        
+        from pathlib import Path
+        model_path_obj = Path(model_path)
+        
+        # Validate model path exists
+        if not model_path_obj.exists():
+            return {"error": "Model path does not exist", "model_path": model_path}
+        
+        agent = STATE.workers[agent_id]
+        old_model_path = agent.model_path
+        
+        # Update model path
+        agent.model_path = model_path
+        
+        # Reload model if requested
+        load_success = False
+        if reload:
+            try:
+                await agent.load_model()
+                load_success = agent.is_model_loaded
+            except Exception as e:
+                return {
+                    "error": f"Failed to load model: {str(e)}",
+                    "agent_id": agent_id,
+                    "model_path": model_path
+                }
+        
+        # Update config
+        if agent_id in AGENT_CONFIGS:
+            AGENT_CONFIGS[agent_id].model_path = model_path
+            AGENT_CONFIGS[agent_id].fine_tuned = True
+        
+        return {
+            "message": f"Model updated for {agent.person_name}",
+            "agent_id": agent_id,
+            "old_model_path": old_model_path,
+            "new_model_path": model_path,
+            "model_loaded": load_success,
+            "reload_attempted": reload
+        }
+
+    @app.tool()
+    async def configure_agent(
+        agent_id: str,
+        person_name: Optional[str] = None,
+        model_path: Optional[str] = None,
+        capabilities: Optional[Dict[str, float]] = None
+    ) -> Dict[str, Any]:
+        """Configure an agent's name, model, and capabilities all at once."""
+        await ensure_initialized()
+        
+        if agent_id not in STATE.workers:
+            return {"error": "Agent not found", "agent_id": agent_id}
+        
+        agent = STATE.workers[agent_id]
+        updates = {}
+        
+        # Update person name
+        if person_name:
+            person_name = person_name.strip()
+            if person_name:
+                agent.person_name = person_name
+                updates["person_name"] = person_name
+        
+        # Update model
+        if model_path:
+            from pathlib import Path
+            if Path(model_path).exists():
+                agent.model_path = model_path
+                try:
+                    await agent.load_model()
+                    updates["model_path"] = model_path
+                    updates["model_loaded"] = agent.is_model_loaded
+                except Exception as e:
+                    updates["model_error"] = str(e)
+            else:
+                updates["model_error"] = "Model path does not exist"
+        
+        # Update capabilities
+        if capabilities:
+            agent.capabilities.technical_skills.update(capabilities)
+            await STATE.shared.register_agent(agent_id, agent.capabilities)
+            updates["capabilities"] = capabilities
+        
+        # Persist changes to config
+        if agent_id in AGENT_CONFIGS:
+            if person_name:
+                AGENT_CONFIGS[agent_id].person_name = person_name
+            if model_path and Path(model_path).exists():
+                AGENT_CONFIGS[agent_id].model_path = model_path
+                AGENT_CONFIGS[agent_id].fine_tuned = True
+            if capabilities:
+                AGENT_CONFIGS[agent_id].capabilities.update(capabilities)
+        
+        _persist_agent_names()
+        
+        return {
+            "message": f"Agent {agent_id} configured successfully",
+            "agent_id": agent_id,
+            "updates": updates
+        }
+
+    @app.tool()
+    async def reload_agent_model(agent_id: str) -> Dict[str, Any]:
+        """Reload an agent's model from disk."""
+        await ensure_initialized()
+        
+        if agent_id not in STATE.workers:
+            return {"error": "Agent not found", "agent_id": agent_id}
+        
+        agent = STATE.workers[agent_id]
+        
+        if not agent.model_path:
+            return {
+                "error": "No model path configured for this agent",
+                "agent_id": agent_id,
+                "person_name": agent.person_name
+            }
+        
+        try:
+            await agent.load_model()
+            return {
+                "message": f"Model reloaded for {agent.person_name}",
+                "agent_id": agent_id,
+                "model_path": agent.model_path,
+                "model_loaded": agent.is_model_loaded
+            }
+        except Exception as e:
+            return {
+                "error": f"Failed to reload model: {str(e)}",
+                "agent_id": agent_id,
+                "model_path": agent.model_path
+            }
+
+    @app.tool()
+    async def set_base_model(base_model_name: str) -> Dict[str, Any]:
+        """Set the base model for future training operations."""
+        settings.BASE_MODEL_NAME = base_model_name
+        
+        # Update environment variable for persistence
+        import os
+        os.environ["BASE_MODEL_NAME"] = base_model_name
+        
+        return {
+            "message": "Base model updated",
+            "base_model": base_model_name,
+            "note": "This affects new training operations. Existing models unchanged."
+        }
+
+    # ============= API Key Management Functions =============
+    
+    @app.tool()
+    async def add_api_key(provider: str, api_key: str, label: Optional[str] = None) -> Dict[str, Any]:
+        """Add or update an API key for a provider (openai, anthropic, huggingface, etc.)."""
+        result = api_key_manager.add_key(provider, api_key, label)
+        return result
+    
+    @app.tool()
+    async def list_api_keys() -> Dict[str, Any]:
+        """List all configured API keys (masked for security)."""
+        keys = api_key_manager.list_keys()
+        return {
+            "api_keys": keys,
+            "total": len(keys),
+            "supported_providers": api_key_manager.SUPPORTED_PROVIDERS
+        }
+    
+    @app.tool()
+    async def remove_api_key(provider: str) -> Dict[str, Any]:
+        """Remove an API key for a provider."""
+        result = api_key_manager.remove_key(provider)
+        return result
+    
+    @app.tool()
+    async def validate_api_key(provider: str) -> Dict[str, Any]:
+        """Validate an API key by testing it with the provider."""
+        result = api_key_manager.validate_key(provider)
+        return result
+    
+    @app.tool()
+    async def get_api_key_status(provider: str) -> Dict[str, Any]:
+        """Check if an API key exists and is configured for a provider."""
+        has_key = api_key_manager.has_key(provider)
+        
+        if has_key:
+            keys = api_key_manager.list_keys()
+            key_info = next((k for k in keys if k["provider"] == provider), None)
+            return {
+                "provider": provider,
+                "has_key": True,
+                "key_info": key_info
+            }
+        else:
+            return {
+                "provider": provider,
+                "has_key": False,
+                "message": f"No API key configured for {provider}"
+            }
+    
+    @app.tool()
+    async def configure_agent_with_api(
+        agent_id: str,
+        provider: str,
+        model_name: str,
+        person_name: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Configure an agent to use an API-based model instead of local fine-tuned model."""
+        await ensure_initialized()
+        
+        if agent_id not in STATE.workers:
+            return {"error": "Agent not found", "agent_id": agent_id}
+        
+        # Check if API key exists
+        if not api_key_manager.has_key(provider):
+            return {
+                "error": f"No API key configured for {provider}",
+                "message": f"Use add_api_key('{provider}', 'your-key') first"
+            }
+        
+        agent = STATE.workers[agent_id]
+        
+        # Update agent configuration
+        updates = {}
+        
+        if person_name:
+            agent.person_name = person_name.strip()
+            updates["person_name"] = agent.person_name
+        
+        # Store API provider info in agent metadata
+        agent.metadata = getattr(agent, 'metadata', {})
+        agent.metadata['use_api'] = True
+        agent.metadata['api_provider'] = provider
+        agent.metadata['api_model'] = model_name
+        
+        # Set model_path to indicate API usage
+        agent.model_path = f"api://{provider}/{model_name}"
+        agent.is_model_loaded = True  # Mark as loaded (uses API)
+        
+        updates["api_provider"] = provider
+        updates["api_model"] = model_name
+        updates["model_type"] = "api"
+        
+        return {
+            "message": f"Agent {agent_id} configured to use {provider} API",
+            "agent_id": agent_id,
+            "person_name": agent.person_name,
+            "updates": updates
+        }
+    
+    @app.tool()
+    async def list_supported_api_providers() -> Dict[str, Any]:
+        """List all supported API providers for cloud-based models."""
+        
+        providers_info = {
+            "openai": {
+                "models": ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"],
+                "description": "OpenAI GPT models"
+            },
+            "anthropic": {
+                "models": ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
+                "description": "Anthropic Claude models"
+            },
+            "huggingface": {
+                "models": ["any HuggingFace model"],
+                "description": "HuggingFace Hub models"
+            },
+            "cohere": {
+                "models": ["command", "command-light"],
+                "description": "Cohere language models"
+            },
+            "groq": {
+                "models": ["llama3-70b", "mixtral-8x7b"],
+                "description": "Groq ultra-fast inference"
+            },
+            "together": {
+                "models": ["various open-source models"],
+                "description": "Together AI platform"
+            }
+        }
+        
+        return {
+            "supported_providers": api_key_manager.SUPPORTED_PROVIDERS,
+            "total": len(api_key_manager.SUPPORTED_PROVIDERS),
+            "provider_details": providers_info
+        }
 
     return app
 
