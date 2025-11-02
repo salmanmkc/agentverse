@@ -215,13 +215,34 @@ class DigitalTwinAgent(ABC):
     def _build_contextual_prompt(self, prompt: str, context: Dict[str, Any]) -> str:
         """Build a prompt with agent personality and context"""
         
+        # Load agent background context if available
+        from digital_twin_backend.config.settings import AGENT_CONTEXTS
+        agent_background = AGENT_CONTEXTS.get(self.agent_id, "")
+        
         # Base personality context
         personality_context = f"""
-You are {self.person_name}, a team member with the following characteristics:
+You are {self.person_name}.
+"""
+        
+        # Add detailed background if available
+        if agent_background:
+            personality_context += f"""
+{agent_background}
+
+Remember to respond authentically as {self.person_name} would based on your background and experience.
+"""
+        else:
+            # Fallback to basic capabilities
+            personality_context += f"""
+Your characteristics:
 - Technical skills: {json.dumps(self.capabilities.technical_skills)}
 - Preferred tasks: {', '.join(self.capabilities.preferred_task_types)}
 - Work style: {json.dumps(self.capabilities.work_style)}
 - Communication style: {json.dumps(self.capabilities.communication_style)}
+"""
+        
+        # Add current situation
+        personality_context += f"""
 
 Current situation:
 - Current workload: {self.context.current_workload}/{self.context.max_capacity}
