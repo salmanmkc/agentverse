@@ -214,6 +214,16 @@ export default function Page() {
         onClose={() => setShowTaskModal(false)}
         onComplete={handleTaskCreationComplete}
       />
+
+      {/* Floating Create Task Button */}
+      <Button
+        onClick={() => setShowTaskModal(true)}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg gap-2 z-50"
+        size="icon"
+      >
+        <IconPlus className="size-6" />
+        <span className="sr-only">Create Task</span>
+      </Button>
     </SidebarProvider>
   )
 }
