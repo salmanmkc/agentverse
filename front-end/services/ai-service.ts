@@ -121,34 +121,25 @@ class AIService {
 Title: ${request.title}
 Description: ${request.description}
 
-Please provide a JSON response in this exact format:
+IMPORTANT: Respond with ONLY a valid JSON object in this exact format (no markdown, no code blocks, no additional text):
+
 {
   "subtasks": [
     {
-      "id": "unique-id",
+      "id": "st-${Date.now()}-1",
       "title": "Clear, concise title",
-      "description": "Detailed description of what needs to be done",
+      "description": "Detailed description",
       "status": "todo",
       "assignedTo": [],
-      "createdAt": "ISO timestamp",
-      "updatedAt": "ISO timestamp",
+      "createdAt": "${new Date().toISOString()}",
+      "updatedAt": "${new Date().toISOString()}",
       "estimatedHours": 8,
       "completed": false
     }
   ]
 }
 
-Generate 4-6 subtasks that break down this task into actionable items. Each subtask should have:
-- A unique id (format: "st-timestamp-index")
-- A clear, concise title (no markdown formatting)
-- A detailed description (no markdown formatting, no "Description:" prefix)
-- estimatedHours based on complexity (realistic estimate)
-- status: "todo"
-- completed: false
-- assignedTo: []
-- Current ISO timestamps for createdAt and updatedAt
-
-Return ONLY the JSON object, no additional text or markdown.`
+Generate 4-6 subtasks. Each subtask must include all fields above. Use realistic hour estimates based on complexity.`
 
     try {
       const fullResponse = await this.sendStreamingMessage(prompt)
@@ -167,7 +158,8 @@ Return ONLY the JSON object, no additional text or markdown.`
     request: GenerateSubtasksRequest
   ): Promise<GenerateSubtasksResponse> {
     try {
-      console.log("Parsing AI response:", fullResponse)
+      console.log("Parsing AI response, length:", fullResponse.length)
+      console.log("Response preview:", fullResponse.substring(0, 300))
 
       // Parse SSE (Server-Sent Events) format
       const lines = fullResponse.split('\n')
@@ -196,12 +188,319 @@ Return ONLY the JSON object, no additional text or markdown.`
         }
       }
 
+      console.log("Extracted content length:", contentText.length)
       console.log("Extracted content:", contentText)
 
-      // Try to parse as JSON if it looks like JSON
-      if (contentText.includes("{") && contentText.includes("subtasks")) {
+      // Try to extract and parse JSON from the content
+      // The AI might return JSON wrapped in markdown code blocks or with extra text
+      let jsonStr = contentText.trim()
+      
+      // Remove markdown code blocks if present
+      if (jsonStr.includes('```')) {
+        const codeBlockMatch = jsonStr.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
+        if (codeBlockMatch) {
+          jsonStr = codeBlockMatch[1]
+          console.log("Extracted JSON from markdown code block")
+        }
+      }
+      
+      // Try to find JSON object in the text
+      if (jsonStr.includes("{") && jsonStr.includes("subtasks")) {
         try {
-          // Find the JSON object by counting braces to find the complete object
+          // Find the first occurrence of { followed by "subtasks"
+          let startIndex = jsonStr.indexOf('{')
+          
+          // Try each occurrence of { until we find valid JSON
+          while (startIndex !== -1 && startIndex < jsonStr.length) {
+            let braceCount = 0
+            let inString = false
+            let escapeNext = false
+            let jsonEnd = -1
+            
+            for (let i = startIndex; i < jsonStr.length; i++) {
+              const char = jsonStr[i]
+              
+              if (escapeNext) {
+                escapeNext = false
+                continue
+              }
+              
+              if (char === '\\') {
+                escapeNext = true
+                continue
+              }
+              
+              if (char === '"' && !escapeNext) {
+                inString = !inString
+                continue
+              }
+              
+              if (!inString) {
+                if (char === '{') {
+                  braceCount++
+                } else if (char === '}') {
+                  braceCount--
+                  if (braceCount === 0) {
+                    jsonEnd = i
+                    break
+                  }
+                }
+              }
+            }
+            
+            if (jsonEnd !== -1) {
+              const candidateJson = jsonStr.substring(startIndex, jsonEnd + 1)
+              console.log("Attempting to parse JSON candidate, length:", candidateJson.length)
+              
+              try {
+                const parsed = JSON.parse(candidateJson)
+                
+                if (parsed.subtasks && Array.isArray(parsed.subtasks)) {
+                  console.log("✅ Successfully parsed JSON with", parsed.subtasks.length, "subtasks")
+                  return parsed
+                } else {
+                  console.log("Parsed JSON but no subtasks array, keys:", Object.keys(parsed))
+                }
+              } catch (parseError) {
+                console.log("Failed to parse this JSON candidate, trying next...")
+              }
+            }
+            
+            // Try next occurrence of {
+            startIndex = jsonStr.indexOf('{', startIndex + 1)
+          }
+          
+          console.warn("Exhausted all JSON candidates, none were valid")
+        } catch (error) {
+          console.warn("Error during JSON extraction:", error)
+        }
+      } else {
+        console.log("Content doesn't contain both '{' and 'subtasks'")
+      }
+
+      // Last resort: Parse the natural language response into subtasks
+      console.log("Attempting text parsing as fallback...")
+      const subtasks: Subtask[] = []
+      const textLines = contentText.split('\n').filter((l) => l.trim())
+      
+      let currentSubtask: Partial<Subtask> | null = null
+      const baseTimestamp = Date.now()
+      
+      // Helper function to clean markdown and formatting
+      const cleanMarkdown = (text: string): string => {
+        return text
+          .replace(/\*\*/g, '') // Remove bold **
+          .replace(/\*/g, '')   // Remove italics *
+          .replace(/^[-•]\s*/, '') // Remove leading dash or bullet
+          .replace(/^Description:\s*/i, '') // Remove "Description:" prefix
+          .replace(/^Title:\s*/i, '') // Remove "Title:" prefix
+          .trim()
+      }
+      
+      for (let i = 0; i < textLines.length; i++) {
+        const line = textLines[i].trim()
+        
+        // Skip empty lines and common headers
+        if (!line || line.toLowerCase().includes('subtask') && line.length < 15) continue
+        
+        // Look for numbered items like "1.", "2.", "1)", "Task 1:", etc.
+        const numberMatch = line.match(/^(?:Task\s*)?(\d+)[.):]\s*(.+)/i)
+        if (numberMatch) {
+          // Save previous subtask if exists
+          if (currentSubtask && currentSubtask.title) {
+            subtasks.push({
+              id: `st-${baseTimestamp}-${subtasks.length}`,
+              title: cleanMarkdown(currentSubtask.title),
+              description: cleanMarkdown(currentSubtask.description || currentSubtask.title),
+              status: "todo",
+              assignedTo: [],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              estimatedHours: currentSubtask.estimatedHours || 8,
+              completed: false,
+            })
+          }
+          
+          // Start new subtask
+          const titleText = numberMatch[2].trim()
+          currentSubtask = {
+            title: titleText,
+            estimatedHours: 8,
+          }
+        } else if (currentSubtask && line) {
+          // Check for hour estimates (8h, 8 hours, 8hrs, etc.)
+          const hourMatch = line.match(/(?:estimated?:?\s*)?(\d+)\s*(?:hours?|hrs?|h)(?:\s|$)/i)
+          if (hourMatch) {
+            currentSubtask.estimatedHours = parseInt(hourMatch[1])
+          } else if (!currentSubtask.description || currentSubtask.description.length < 20) {
+            // This line is the description (or start of it)
+            currentSubtask.description = cleanMarkdown(line)
+          } else if (currentSubtask.description && line.length > 10) {
+            // Append to description if it's meaningful
+            currentSubtask.description += ' ' + cleanMarkdown(line)
+          }
+        }
+      }
+
+      // Add the last subtask
+      if (currentSubtask && currentSubtask.title) {
+        subtasks.push({
+          id: `st-${baseTimestamp}-${subtasks.length}`,
+          title: cleanMarkdown(currentSubtask.title),
+          description: cleanMarkdown(currentSubtask.description || currentSubtask.title),
+          status: "todo",
+          assignedTo: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          estimatedHours: currentSubtask.estimatedHours || 8,
+          completed: false,
+        })
+      }
+
+      if (subtasks.length > 0) {
+        console.log("✅ Generated", subtasks.length, "subtasks from text parsing")
+        return { subtasks }
+      }
+
+      console.warn("❌ No subtasks found in response, using mock data")
+      // Fallback to mock data if no subtasks found
+      return await this.mockGenerateSubtasks(request)
+    } catch (error) {
+      console.error("Failed to parse AI response:", error)
+      // Fallback to mock data if parsing fails
+      return await this.mockGenerateSubtasks(request)
+    }
+  }
+
+  /**
+   * Analyze task metrics
+   * API Endpoint: POST /tasks/analyze-metrics
+   */
+  async analyzeMetrics(
+    request: AnalyzeMetricsRequest
+  ): Promise<AnalyzeMetricsResponse> {
+    console.log('analyzeMetrics called:', { useMock: this.useMock, request })
+    
+    if (this.useMock) {
+      console.log('Using mock data for metrics')
+      return this.mockAnalyzeMetrics(request)
+    }
+
+    console.log('Calling platform-engineer-p2p for metrics analysis')
+    
+    // Call the AI platform engineering backend using streaming API
+    const subtasksDescription = request.subtasks
+      .map((st, idx) => `${idx + 1}. ${st.title}: ${st.description}`)
+      .join('\n')
+    
+    const prompt = `Analyze the following task and provide metrics:
+
+Title: ${request.title}
+Description: ${request.description}
+
+Subtasks:
+${subtasksDescription}
+
+Please provide a JSON response in this exact format:
+{
+  "metrics": [
+    {
+      "metric": "Impact",
+      "value": 75,
+      "description": "Clear description of the impact",
+      "category": "impact"
+    },
+    {
+      "metric": "Urgency",
+      "value": 65,
+      "description": "Clear description of the urgency",
+      "category": "urgency"
+    },
+    {
+      "metric": "Complexity",
+      "value": 80,
+      "description": "Clear description of the complexity",
+      "category": "complexity"
+    },
+    {
+      "metric": "Dependencies",
+      "value": 55,
+      "description": "Clear description of dependencies",
+      "category": "dependencies"
+    },
+    {
+      "metric": "Risk",
+      "value": 60,
+      "description": "Clear description of risks",
+      "category": "risk"
+    }
+  ]
+}
+
+Analyze the task and provide realistic metric values (0-100) for:
+- Impact: How much this task will affect the system and users
+- Urgency: Time sensitivity based on project timeline
+- Complexity: Technical complexity and skill requirements
+- Dependencies: Number of other tasks and systems this affects
+- Risk: Potential risks and uncertainty involved
+
+Each metric should have:
+- metric: The metric name (exactly as shown above)
+- value: A number between 0-100
+- description: A clear, concise explanation (no markdown formatting)
+- category: One of: "impact", "urgency", "complexity", "dependencies", "risk"
+
+Return ONLY the JSON object, no additional text or markdown.`
+
+    try {
+      const fullResponse = await this.sendStreamingMessage(prompt)
+      
+      // Parse the AI response and format it as AnalyzeMetricsResponse
+      return this.parseMetricsFromStream(fullResponse, request)
+    } catch (error) {
+      console.error("Failed to call AI backend for metrics:", error)
+      // Fallback to mock data on error
+      return this.mockAnalyzeMetrics(request)
+    }
+  }
+
+  private async parseMetricsFromStream(
+    fullResponse: string,
+    request: AnalyzeMetricsRequest
+  ): Promise<AnalyzeMetricsResponse> {
+    try {
+      console.log("Parsing metrics AI response")
+
+      // Parse SSE (Server-Sent Events) format
+      const lines = fullResponse.split('\n')
+      let contentText = ''
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const jsonData = JSON.parse(line.substring(6))
+            
+            if (jsonData.result?.artifact) {
+              const artifact = jsonData.result.artifact
+              if (artifact.parts) {
+                for (const part of artifact.parts) {
+                  if (part.kind === 'text' && part.text) {
+                    contentText += part.text
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            continue
+          }
+        }
+      }
+
+      console.log("Extracted metrics content:", contentText)
+
+      // Try to parse as JSON
+      if (contentText.includes("{") && contentText.includes("metrics")) {
+        try {
           const firstBrace = contentText.indexOf('{')
           
           if (firstBrace !== -1) {
@@ -243,124 +542,26 @@ Return ONLY the JSON object, no additional text or markdown.`
             
             if (jsonEnd !== -1) {
               const jsonStr = contentText.substring(firstBrace, jsonEnd + 1)
-              console.log("Attempting to parse JSON:", jsonStr.substring(0, 100) + "...")
+              console.log("Attempting to parse metrics JSON")
               const parsed = JSON.parse(jsonStr)
               
-              if (parsed.subtasks && Array.isArray(parsed.subtasks)) {
-                console.log("Successfully parsed JSON response with", parsed.subtasks.length, "subtasks")
+              if (parsed.metrics && Array.isArray(parsed.metrics)) {
+                console.log("Successfully parsed metrics JSON with", parsed.metrics.length, "metrics")
                 return parsed
               }
             }
           }
         } catch (jsonError) {
-          console.warn("Failed to parse as JSON, falling back to text parsing:", jsonError)
+          console.warn("Failed to parse metrics as JSON, using fallback:", jsonError)
         }
       }
 
-      // Parse the natural language response into subtasks
-      const subtasks: Subtask[] = []
-      const textLines = contentText.split('\n').filter((l) => l.trim())
-      
-      let currentSubtask: Partial<Subtask> | null = null
-
-      const baseTimestamp = Date.now()
-      
-      // Helper function to clean markdown formatting
-      const cleanMarkdown = (text: string): string => {
-        return text
-          .replace(/\*\*/g, '') // Remove bold **
-          .replace(/\*/g, '')   // Remove italics *
-          .replace(/^-\s*/, '') // Remove leading dash
-          .replace(/^Description:\s*/i, '') // Remove "Description:" prefix
-          .trim()
-      }
-      
-      for (let i = 0; i < textLines.length; i++) {
-        const line = textLines[i].trim()
-        
-        // Look for numbered items like "1.", "2.", "1)", etc.
-        const numberMatch = line.match(/^(\d+)[.)]\s*(.+)/)
-        if (numberMatch) {
-          // Save previous subtask if exists
-          if (currentSubtask && currentSubtask.title) {
-            subtasks.push({
-              id: `st-${baseTimestamp}-${subtasks.length}`,
-              title: cleanMarkdown(currentSubtask.title),
-              description: cleanMarkdown(currentSubtask.description || currentSubtask.title),
-              status: "todo",
-              assignedTo: [],
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              estimatedHours: currentSubtask.estimatedHours || 8,
-              completed: false,
-            })
-          }
-          
-          // Start new subtask - clean the title immediately
-          currentSubtask = {
-            title: numberMatch[2].trim(),
-            estimatedHours: 8,
-          }
-        } else if (currentSubtask && line) {
-          // Check for hour estimates
-          const hourMatch = line.match(/(\d+)\s*(?:hours?|hrs?|h)/i)
-          if (hourMatch) {
-            currentSubtask.estimatedHours = parseInt(hourMatch[1])
-          } else if (!currentSubtask.description) {
-            // This line is part of the description
-            currentSubtask.description = line
-          } else {
-            // Append to description
-            currentSubtask.description += ' ' + line
-          }
-        }
-      }
-
-      // Add the last subtask
-      if (currentSubtask && currentSubtask.title) {
-        subtasks.push({
-          id: `st-${baseTimestamp}-${subtasks.length}`,
-          title: cleanMarkdown(currentSubtask.title),
-          description: cleanMarkdown(currentSubtask.description || currentSubtask.title),
-          status: "todo",
-          assignedTo: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          estimatedHours: currentSubtask.estimatedHours || 8,
-          completed: false,
-        })
-      }
-
-      if (subtasks.length > 0) {
-        console.log("Generated subtasks:", subtasks)
-        return { subtasks }
-      }
-
-      console.warn("No subtasks found in response, using mock data")
-      // Fallback to mock data if no subtasks found
-      return await this.mockGenerateSubtasks(request)
+      console.warn("No metrics found in response, using mock data")
+      return await this.mockAnalyzeMetrics(request)
     } catch (error) {
-      console.error("Failed to parse AI response:", error)
-      // Fallback to mock data if parsing fails
-      return await this.mockGenerateSubtasks(request)
+      console.error("Failed to parse metrics AI response:", error)
+      return await this.mockAnalyzeMetrics(request)
     }
-  }
-
-  /**
-   * Analyze task metrics
-   * API Endpoint: POST /tasks/analyze-metrics
-   */
-  async analyzeMetrics(
-    request: AnalyzeMetricsRequest
-  ): Promise<AnalyzeMetricsResponse> {
-    if (this.useMock) {
-      return this.mockAnalyzeMetrics(request)
-    }
-
-    return apiClient.post<AnalyzeMetricsResponse>(
-      "/tasks/analyze-metrics",
-      request
-    )
   }
 
   /**
