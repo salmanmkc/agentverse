@@ -281,6 +281,28 @@ Your Next.js dashboard can now connect to:
 
 ## 🔧 Troubleshooting
 
+## 🔌 (Optional) MCP Server
+
+Run a stdio MCP server to control agents programmatically via MCP tools (no FastAPI needed).
+
+```bash
+pip install mcp
+python -m digital_twin_backend.mcp.server
+```
+
+Tools available:
+
+- initialize_system
+- get_system_status
+- create_task
+- get_tasks / get_task
+- assign_task / update_task_status
+- get_agents / get_agent_status
+- get_agent_directory / update_agent_name
+
+Use any MCP-compatible client to connect over stdio.
+
+
 ### Common Issues & Solutions
 
 **❌ "Import error" when running scripts**
