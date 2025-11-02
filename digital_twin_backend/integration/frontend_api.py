@@ -180,11 +180,6 @@ class FrontendIntegrationAPI:
             await self.shared_knowledge.initialize()
             await self.communication_protocol.initialize()
             
-            # Ensure OpenAI API key is loaded (required for Ryan Lin's assistant)
-            from digital_twin_backend.config.api_keys import api_key_manager
-            if settings.OPENAI_API_KEY:
-                api_key_manager.add_key("openai", settings.OPENAI_API_KEY, "From .env")
-            
             # Create manager agent
             self.manager_agent = ManagerAgent(
                 shared_knowledge=self.shared_knowledge,
@@ -205,27 +200,12 @@ class FrontendIntegrationAPI:
                     worker_capabilities = AgentCapabilities(
                         technical_skills=agent_config.capabilities
                     )
-                    
-                    # Check if this agent should use OpenAI Assistant API
-                    use_api_model = False
-                    api_provider = "openai"
-                    api_model = None
-                    
-                    # Ryan Lin uses custom finetuned OpenAI assistant
-                    if agent_id == "ryan_lin":
-                        use_api_model = True
-                        api_provider = "openai"
-                        api_model = "asst_Z0iNwOpGtqooVPFMutWfz15G"
-                    
                     worker = WorkerAgent(
                         agent_id=agent_id,
                         person_name=agent_config.person_name,
                         shared_knowledge=self.shared_knowledge,
                         capabilities=worker_capabilities,
-                        model_path=agent_config.model_path if agent_config.fine_tuned else None,
-                        use_api_model=use_api_model,
-                        api_provider=api_provider if use_api_model else "openai",
-                        api_model=api_model if use_api_model else "gpt-3.5-turbo"
+                        model_path=agent_config.model_path if agent_config.fine_tuned else None
                     )
                     
                     await worker.initialize()
