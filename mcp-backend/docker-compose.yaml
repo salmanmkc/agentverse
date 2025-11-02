@@ -7,6 +7,7 @@ services:
     container_name: platform-engineer-p2p
     volumes:
       - ./prompt_config.yaml:/app/prompt_config.deep_agent.yaml
+      - ./ai_platform_engineering:/app/ai_platform_engineering
     profiles:
       - p2p
       - p2p-tracing

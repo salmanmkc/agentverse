@@ -112,7 +112,7 @@ class AIPlatformEngineerMAS:
       tools=all_agents,
       instructions=system_prompt,
       subagents=subagents,
-      model=base_model
+      model=base_model,
       # response_format=PlatformEngineerResponse
     )
 
