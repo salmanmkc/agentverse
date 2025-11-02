@@ -1,46 +1,79 @@
-import { Task, Subtask } from "@/types/task"
-import { mockTasks } from "@/lib/mock-data"
+import { Task, TaskCreationState, Subtask } from "@/types/task"
 
 class TaskService {
-  private tasks: Task[] = [...mockTasks]
+  private apiBaseUrl = "/api/tasks"
 
-  getTasks(): Task[] {
-    return this.tasks
+  async getTasks(): Promise<Task[]> {
+    const response = await fetch(this.apiBaseUrl)
+    if (!response.ok) {
+      throw new Error("Failed to fetch tasks")
+    }
+    return response.json()
+  }
+  
+  async getOpenTasks(): Promise<Task[]> {
+    const tasks = await this.getTasks()
+    return tasks.filter((t) => t.status === "open")
   }
 
-  getOpenTasks(): Task[] {
-    return this.tasks.filter((t) => t.status === "open")
+  async getClosedTasks(): Promise<Task[]> {
+    const tasks = await this.getTasks()
+    return tasks.filter((t) => t.status === "closed")
   }
 
-  getClosedTasks(): Task[] {
-    return this.tasks.filter((t) => t.status === "closed")
+  async getTaskById(id: string): Promise<Task | undefined> {
+    const tasks = await this.getTasks()
+    return tasks.find((task) => task.id === id)
   }
 
-  getTaskById(id: string): Task | undefined {
-    return this.tasks.find((t) => t.id === id)
+  async createTask(taskData: TaskCreationState): Promise<Task> {
+    const response = await fetch(this.apiBaseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(taskData),
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to create task")
+    }
+
+    return response.json()
   }
 
-  createTask(task: Task): void {
-    this.tasks.unshift(task)
+  async updateTask(id: string, updates: Partial<Task>): Promise<Task | undefined> {
+    const response = await fetch(`${this.apiBaseUrl}/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updates),
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to update task")
+    }
+
+    return response.json()
   }
 
-  updateTask(id: string, updates: Partial<Task>): void {
-    const index = this.tasks.findIndex((t) => t.id === id)
-    if (index !== -1) {
-      this.tasks[index] = { ...this.tasks[index], ...updates }
+  async deleteTask(id: string): Promise<void> {
+    const response = await fetch(`${this.apiBaseUrl}/${id}`, {
+      method: "DELETE",
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to delete task")
     }
   }
 
-  deleteTask(id: string): void {
-    this.tasks = this.tasks.filter((t) => t.id !== id)
-  }
-
-  updateSubtask(
+  async updateSubtask(
     taskId: string,
     subtaskId: string,
     updates: Partial<Subtask>
-  ): void {
-    const task = this.getTaskById(taskId)
+  ): Promise<void> {
+    const task = await this.getTaskById(taskId)
     if (!task) return
 
     const subtaskIndex = task.subtasks.findIndex((st) => st.id === subtaskId)
@@ -49,7 +82,7 @@ class TaskService {
         ...task.subtasks[subtaskIndex],
         ...updates,
       }
-      this.updateTask(taskId, task)
+      await this.updateTask(taskId, task)
     }
   }
 

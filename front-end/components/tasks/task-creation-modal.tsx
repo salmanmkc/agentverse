@@ -11,6 +11,8 @@ import { Step5Allocation } from "./steps/step5-allocation"
 import { Button } from "@/components/ui/button"
 import { IconArrowLeft, IconX } from "@tabler/icons-react"
 import { motion, AnimatePresence } from "motion/react"
+import { taskService } from "@/services/task-service"
+import { toast } from "sonner"
 
 interface TaskCreationModalProps {
   open: boolean
@@ -31,13 +33,29 @@ export function TaskCreationModal({
     matchResults: new Map(),
     finalAllocations: new Map(),
   })
+  const [isCreating, setIsCreating] = useState(false)
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (state.step < 5) {
       setState({ ...state, step: (state.step + 1) as 1 | 2 | 3 | 4 | 5 })
     } else {
-      onComplete(state)
-      onClose()
+      setIsCreating(true)
+      try {
+        const newTask = await taskService.createTask(state)
+        toast.success("Task created successfully!", {
+          description: `Task "${newTask.title}" has been added.`,
+        })
+        onComplete(state)
+        onClose()
+      } catch (error) {
+        console.error("Failed to create task:", error)
+        toast.error("Failed to create task", {
+          description:
+            error instanceof Error ? error.message : "An unknown error occurred.",
+        })
+      } finally {
+        setIsCreating(false)
+      }
     }
   }
 
@@ -141,8 +159,12 @@ export function TaskCreationModal({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleNext}>
-            {state.step === 5 ? "Create Task" : "Next Step"}
+          <Button onClick={handleNext} disabled={isCreating}>
+            {isCreating
+              ? "Creating..."
+              : state.step === 5
+                ? "Create Task"
+                : "Next Step"}
           </Button>
         </div>
       </DialogContent>
