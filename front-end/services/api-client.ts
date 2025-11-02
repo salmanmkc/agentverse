@@ -19,20 +19,29 @@ export class APIClient {
       )
     }
 
-    const response = await fetch(`${this.config.baseURL}${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-      signal: AbortSignal.timeout(this.config.timeout!),
-    })
+    try {
+      const response = await fetch(`${this.config.baseURL}${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+        signal: AbortSignal.timeout(this.config.timeout!),
+      })
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.statusText}`)
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`API error response:`, errorText)
+        throw new Error(
+          `API error: ${response.status} ${response.statusText} - ${errorText}`
+        )
+      }
+
+      return response.json()
+    } catch (error) {
+      console.error(`API request failed to ${this.config.baseURL}${endpoint}:`, error)
+      throw error
     }
-
-    return response.json()
   }
 
   async get<T>(endpoint: string): Promise<T> {
