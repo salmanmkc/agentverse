@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { TaskStats } from "@/components/tasks/task-stats"
@@ -25,79 +25,44 @@ import {
 import { toast } from "sonner"
 
 export default function Page() {
-  const [tasks, setTasks] = useState(taskService.getTasks())
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [openTasks, setOpenTasks] = useState<Task[]>([])
+  const [closedTasks, setClosedTasks] = useState<Task[]>([])
   const users = userService.getUsers()
-  const [openTasks, setOpenTasks] = useState(taskService.getOpenTasks())
-  const [closedTasks, setClosedTasks] = useState(taskService.getClosedTasks())
   const [showClosedTasks, setShowClosedTasks] = useState(false)
   const [showTaskModal, setShowTaskModal] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const refreshTasks = () => {
-    setTasks(taskService.getTasks())
-    setOpenTasks(taskService.getOpenTasks())
-    setClosedTasks(taskService.getClosedTasks())
+  const refreshTasks = async () => {
+    try {
+      const allTasks = await taskService.getTasks()
+      const open = await taskService.getOpenTasks()
+      const closed = await taskService.getClosedTasks()
+      
+      setTasks(allTasks)
+      setOpenTasks(open)
+      setClosedTasks(closed)
+    } catch (error) {
+      console.error("Failed to fetch tasks:", error)
+      toast.error("Failed to load tasks")
+    } finally {
+      setIsLoading(false)
+    }
   }
+
+  useEffect(() => {
+    refreshTasks()
+  }, [])
 
   const handleTaskClick = (task: Task) => {
     // TODO: Implement task details view
     console.log("Task clicked:", task)
   }
 
-  const handleTaskCreationComplete = (state: TaskCreationState) => {
-    // Create the task from the state
-    const now = new Date().toISOString()
-
-    // Flatten all subtasks including children
-    const flattenSubtasks = (subtasks: Subtask[]): Subtask[] => {
-      return subtasks.flatMap((st) => {
-        const { children, ...subtaskWithoutChildren } = st
-        const flattened = [subtaskWithoutChildren]
-        if (children && children.length > 0) {
-          flattened.push(...flattenSubtasks(children))
-        }
-        return flattened
-      })
-    }
-
-    const allSubtasks = flattenSubtasks(state.generatedSubtasks)
-
-    // Assign users to subtasks based on finalAllocations
-    const subtasksWithAssignments = allSubtasks.map((st) => {
-      const assignedUser = state.finalAllocations.get(st.id)
-      return {
-        ...st,
-        assignedTo: assignedUser ? [assignedUser] : [],
-      }
-    })
-
-    // Get all unique assigned members
-    const assignedMembers = Array.from(
-      new Set(
-        Array.from(state.finalAllocations.values()).map((user) => user.id)
-      )
-    ).map((id) => users.find((u) => u.id === id)!)
-
-    const newTask: Task = {
-      id: `task-${Date.now()}`,
-      title: state.task.title || "Untitled Task",
-      description: state.task.description || "",
-      status: state.task.status || "open",
-      priority: state.task.priority || "medium",
-      createdAt: now,
-      updatedAt: now,
-      progress: 0,
-      tags: state.task.tags || [],
-      subtasks: subtasksWithAssignments,
-      metrics: state.analyzedMetrics,
-      assignedMembers,
-    }
-
-    taskService.createTask(newTask)
-    refreshTasks()
-
-    toast.success("Task created successfully!", {
-      description: `"${newTask.title}" has been added to your dashboard.`,
-    })
+  const handleTaskCreationComplete = async (state: TaskCreationState) => {
+    // The task creation is now handled in the modal itself
+    // This callback is just to refresh the tasks list after creation
+    await refreshTasks()
   }
 
   return (
@@ -138,7 +103,11 @@ export default function Page() {
                   <h3 className="text-lg font-semibold">
                     Open Tasks ({openTasks.length})
                   </h3>
-                  {openTasks.length > 0 ? (
+                  {isLoading ? (
+                    <div className="text-center py-12 border rounded-lg bg-muted/30">
+                      <p className="text-muted-foreground">Loading tasks...</p>
+                    </div>
+                  ) : openTasks.length > 0 ? (
                     <div className="grid grid-cols-1 gap-4 @4xl/main:grid-cols-2">
                       {openTasks.map((task) => (
                         <TaskCard

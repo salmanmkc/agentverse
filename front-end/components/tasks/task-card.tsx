@@ -75,9 +75,9 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium">{task.progress}%</span>
+              <span className="font-medium">{task.progress ?? 0}%</span>
             </div>
-            <Progress value={task.progress} className="h-2" />
+            <Progress value={task.progress ?? 0} className="h-2" />
           </div>
 
           {/* Subtasks Summary */}
@@ -89,7 +89,7 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
           </div>
 
           {/* Assigned Members */}
-          {task.assignedMembers.length > 0 && (
+          {task.assignedMembers && task.assignedMembers.length > 0 && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Team:</span>
               <div className="flex -space-x-2">

@@ -4,13 +4,14 @@ export interface Subtask {
   id: string
   title: string
   description: string
-  status: "open" | "in_progress" | "completed"
+  status: "todo" | "in_progress" | "completed"
   assignedTo: User[]
   createdAt: string
   updatedAt: string
   matchCandidates?: MatchCandidate[]
   estimatedHours?: number
   children?: Subtask[] // For recursive breakdown
+  completed: boolean
 }
 
 export interface MatchCandidate {
@@ -36,13 +37,15 @@ export interface Task {
   priority: "low" | "medium" | "high"
   createdAt: string
   updatedAt: string
-  progress: number // 0-100
+  progress?: number // 0-100
   tags: string[]
   subtasks: Subtask[]
   metrics: TaskMetric[]
-  assignedMembers: User[]
+  assignedMembers?: User[]
   githubIssueUrl?: string
   githubProjectUrl?: string
+  allocations: Map<string, User>
+  estimatedHours: number
 }
 
 export interface TaskCreationState {

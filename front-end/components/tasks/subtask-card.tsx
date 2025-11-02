@@ -15,11 +15,11 @@ interface SubtaskCardProps {
 
 export function SubtaskCard({ subtask }: SubtaskCardProps) {
   const statusConfig = {
-    open: {
+    todo: {
       icon: IconCircle,
       color: "text-muted-foreground",
       bgColor: "bg-muted",
-      label: "Open",
+      label: "To Do",
     },
     in_progress: {
       icon: IconLoader,
@@ -35,7 +35,7 @@ export function SubtaskCard({ subtask }: SubtaskCardProps) {
     },
   }
 
-  const config = statusConfig[subtask.status]
+  const config = statusConfig[subtask.status] || statusConfig.todo
   const StatusIcon = config.icon
 
   return (
