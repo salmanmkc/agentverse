@@ -260,14 +260,16 @@ export function Step4Matching({ state, updateState }: Step4MatchingProps) {
                                     </div>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                  <span>GitHub:</span>
-                                  <span>{match.githubActivity.closedPRs} PRs merged</span>
-                                  <span>•</span>
-                                  <span>{match.githubActivity.closedIssues} issues resolved</span>
-                                  <span>•</span>
-                                  <span>{match.githubActivity.openPRs + match.githubActivity.openIssues} active</span>
-                                </div>
+                                {match.githubActivity && (
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span>GitHub:</span>
+                                    <span>{match.githubActivity.closedPRs || 0} PRs merged</span>
+                                    <span>•</span>
+                                    <span>{match.githubActivity.closedIssues || 0} issues resolved</span>
+                                    <span>•</span>
+                                    <span>{(match.githubActivity.openPRs || 0) + (match.githubActivity.openIssues || 0)} active</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
