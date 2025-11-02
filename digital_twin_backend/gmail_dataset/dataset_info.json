@@ -1,0 +1,47 @@
+{
+  "citation": "",
+  "description": "",
+  "features": {
+    "messages": {
+      "feature": {
+        "content": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "role": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      },
+      "_type": "List"
+    },
+    "metadata": {
+      "date": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "email_id": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "is_reply": {
+        "dtype": "bool",
+        "_type": "Value"
+      },
+      "original_email_id": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "recipient": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "subject": {
+        "dtype": "string",
+        "_type": "Value"
+      }
+    }
+  },
+  "homepage": "",
+  "license": ""
+}
