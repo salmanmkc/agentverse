@@ -1,6 +1,7 @@
+import React from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { HeroHeader } from "@/components/header"
+import { HeroHeader } from './header'
 import { ChevronRight, CirclePlay } from 'lucide-react'
 import Image from 'next/image'
 
@@ -14,7 +15,7 @@ export default function HeroSection() {
                         <div className="relative z-10 mx-auto w-full max-w-5xl px-6">
                             <div className="md:w-1/2">
                                 <div>
-                                    <h1 className="max-w-md text-balance text-5xl font-medium md:text-6xl">Managing your software engineering team at scale.</h1>
+                                    <h1 className="max-w-md text-balance text-5xl font-medium md:text-6xl">Simple payments for startups</h1>
                                     <p className="text-muted-foreground my-8 max-w-2xl text-balance text-xl">One tool that does it all. Search, generate, analyze, and chat—right inside Tailark.</p>
 
                                     <div className="flex items-center gap-3">
@@ -22,7 +23,7 @@ export default function HeroSection() {
                                             asChild
                                             size="lg"
                                             className="pr-4.5">
-                                            <Link href="/dashboard">
+                                            <Link href="#link">
                                                 <span className="text-nowrap">Get Started</span>
                                                 <ChevronRight className="opacity-50" />
                                             </Link>
