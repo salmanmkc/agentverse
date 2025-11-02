@@ -39,7 +39,7 @@ class Settings:
         
         # Agent Settings
         self.MANAGER_AGENT_ID = "manager"
-        self.WORKER_AGENT_IDS = ["agent_1", "agent_2", "agent_3", "agent_4", "agent_5"]
+        self.WORKER_AGENT_IDS = ["agent_1", "agent_2", "agent_3", "agent_4", "agent_5", "ryan_lin"]
         self.MAX_NEGOTIATION_ROUNDS = 3
         self.TASK_TIMEOUT_MINUTES = 30
         
@@ -164,6 +164,7 @@ AGENT_CONFIGS = {
     "agent_3": AgentConfig("agent_3", "Sarah Johnson", {"creative": 0.8, "frontend": 0.7}),
     "agent_4": AgentConfig("agent_4", "Mike Chen", {"backend": 0.9, "database": 0.8}),
     "agent_5": AgentConfig("agent_5", "Lisa Wong", {"qa": 0.85, "testing": 0.9}),
+    "ryan_lin": AgentConfig("ryan_lin", "Ryan Lin", {"technical": 0.9, "research": 0.95, "communication": 0.85}),
 }
 
 # Agent background contexts - used for fine-tuning and prompts
