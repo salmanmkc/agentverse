@@ -768,20 +768,139 @@ Return top 3 from the known team, ranks 1-3.`
   }
 
   /**
-   * Create GitHub issues for subtasks
+   * Create GitHub issues for subtasks using GitHub MCP
    * API Endpoint: POST /github/create-issues
    */
   async createGitHubIssues(
     request: CreateGitHubIssuesRequest
   ): Promise<CreateGitHubIssuesResponse> {
+    console.log('createGitHubIssues called:', { useMock: this.useMock, request })
+    
     if (this.useMock) {
+      console.log('Using mock data for GitHub issue creation')
       return this.mockCreateGitHubIssues(request)
     }
 
-    return apiClient.post<CreateGitHubIssuesResponse>(
-      "/github/create-issues",
-      request
-    )
+    console.log('Calling platform-engineer-p2p to create GitHub issues with MCP')
+    
+    const repo = request.repository || 'salmanmkc/agentverse'
+    
+    // Build the prompt with all subtasks and assignments
+    const subtasksList = request.subtasks.map((st, idx) => {
+      return `${idx + 1}. Title: "${st.subtaskTitle}"
+   Description: ${st.subtaskDescription}
+   Assigned to: @${st.assignedUserId}
+   Estimated: ${st.estimatedHours || 'N/A'}h`
+    }).join('\n\n')
+    
+    const prompt = `Create GitHub issues for task: "${request.taskTitle}"
+
+Repository: ${repo}
+
+Subtasks to create as issues:
+${subtasksList}
+
+Use GitHub MCP to:
+1. Create an issue for each subtask in ${repo}
+2. Assign each issue to the specified GitHub user
+3. Add labels: "task", "auto-created"
+4. Set the issue body with the description and estimated hours
+
+Return ONLY JSON (no markdown):
+{
+  "issueUrls": ["https://github.com/${repo}/issues/123", ...],
+  "projectUrl": "${request.projectBoard ? 'project-url' : ''}"
+}
+
+Create all ${request.subtasks.length} issues now.`
+
+    console.log('GitHub Issue Creation Prompt:', prompt)
+
+    try {
+      const fullResponse = await this.sendStreamingMessage(prompt)
+      console.log('GitHub MCP Response:', fullResponse)
+      return this.parseGitHubIssuesFromStream(fullResponse, request)
+    } catch (error) {
+      console.error("Failed to create GitHub issues:", error)
+      return this.mockCreateGitHubIssues(request)
+    }
+  }
+
+  private async parseGitHubIssuesFromStream(
+    fullResponse: string,
+    request: CreateGitHubIssuesRequest
+  ): Promise<CreateGitHubIssuesResponse> {
+    try {
+      console.log("Parsing GitHub issues response")
+
+      // Parse SSE format
+      const lines = fullResponse.split('\n')
+      let contentText = ''
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const jsonData = JSON.parse(line.substring(6))
+            if (jsonData.result?.artifact?.parts) {
+              for (const part of jsonData.result.artifact.parts) {
+                if (part.kind === 'text' && part.text) {
+                  contentText += part.text
+                }
+              }
+            }
+          } catch (e) {
+            continue
+          }
+        }
+      }
+
+      console.log("Extracted GitHub response:", contentText)
+
+      // Try to extract JSON
+      let jsonStr = contentText.trim()
+      if (jsonStr.includes('```')) {
+        const match = jsonStr.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
+        if (match) jsonStr = match[1]
+      }
+
+      if (jsonStr.includes("{") && jsonStr.includes("issueUrls")) {
+        let startIndex = jsonStr.indexOf('{')
+        while (startIndex !== -1) {
+          let braceCount = 0, inString = false, escapeNext = false, jsonEnd = -1
+          
+          for (let i = startIndex; i < jsonStr.length; i++) {
+            const char = jsonStr[i]
+            if (escapeNext) { escapeNext = false; continue }
+            if (char === '\\') { escapeNext = true; continue }
+            if (char === '"' && !escapeNext) { inString = !inString; continue }
+            if (!inString) {
+              if (char === '{') braceCount++
+              else if (char === '}') {
+                braceCount--
+                if (braceCount === 0) { jsonEnd = i; break }
+              }
+            }
+          }
+          
+          if (jsonEnd !== -1) {
+            try {
+              const parsed = JSON.parse(jsonStr.substring(startIndex, jsonEnd + 1))
+              if (parsed.issueUrls && Array.isArray(parsed.issueUrls)) {
+                console.log("✅ Created", parsed.issueUrls.length, "GitHub issues")
+                return parsed
+              }
+            } catch (e) { /* try next */ }
+          }
+          startIndex = jsonStr.indexOf('{', startIndex + 1)
+        }
+      }
+
+      console.warn("❌ Could not parse GitHub response, using mock")
+      return await this.mockCreateGitHubIssues(request)
+    } catch (error) {
+      console.error("Failed to parse GitHub issues response:", error)
+      return await this.mockCreateGitHubIssues(request)
+    }
   }
 
   // ============ MOCK IMPLEMENTATIONS ============

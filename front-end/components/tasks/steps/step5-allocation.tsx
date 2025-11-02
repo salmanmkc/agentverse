@@ -7,18 +7,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { IconCheck, IconAlertCircle } from "@tabler/icons-react"
+import { IconCheck, IconAlertCircle, IconLoader } from "@tabler/icons-react"
 import { motion } from "motion/react"
 import { useState } from "react"
+import { Button } from "@/components/ui/button"
 
 interface Step5AllocationProps {
   state: TaskCreationState
   updateState: (updates: Partial<TaskCreationState>) => void
+  onCreateTask?: () => Promise<void>
+  isCreating?: boolean
 }
 
-export function Step5Allocation({ state, updateState }: Step5AllocationProps) {
+export function Step5Allocation({ state, updateState, onCreateTask, isCreating }: Step5AllocationProps) {
   const [createGitHubIssues, setCreateGitHubIssues] = useState(true)
-  const [repository, setRepository] = useState("example/repo")
+  const [repository, setRepository] = useState("salmanmkc/agentverse")
   const [projectBoard, setProjectBoard] = useState("")
   const [sendNotifications, setSendNotifications] = useState(true)
 
@@ -209,11 +212,30 @@ export function Step5Allocation({ state, updateState }: Step5AllocationProps) {
 
       <div className="rounded-lg border bg-muted/30 p-4">
         <h4 className="font-medium mb-2">Ready to create?</h4>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground mb-4">
           Click "Create Task" to finalize. The task will be added to your
           dashboard{createGitHubIssues && ", GitHub issues will be created"}
           {sendNotifications && ", and team members will be notified"}.
         </p>
+        
+        <Button 
+          onClick={onCreateTask}
+          disabled={isCreating || !onCreateTask}
+          size="lg"
+          className="w-full gap-2"
+        >
+          {isCreating ? (
+            <>
+              <IconLoader className="size-5 animate-spin" />
+              Creating Task & Issues...
+            </>
+          ) : (
+            <>
+              <IconCheck className="size-5" />
+              Create Task
+            </>
+          )}
+        </Button>
       </div>
     </div>
   )
