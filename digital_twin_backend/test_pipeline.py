@@ -11,6 +11,15 @@ from pathlib import Path
 from datetime import datetime
 import logging
 
+# Ensure we use venv Python if available
+_venv_python = Path(__file__).parent / "venv" / "bin" / "python"
+if _venv_python.exists() and sys.executable != str(_venv_python):
+    import os
+    if "VIRTUAL_ENV" not in os.environ:
+        print(f"⚠️  Warning: Not using venv Python. Consider running: source venv/bin/activate")
+        print(f"   Current Python: {sys.executable}")
+        print(f"   Venv Python: {_venv_python}")
+
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

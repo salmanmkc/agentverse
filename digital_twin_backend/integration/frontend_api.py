@@ -211,8 +211,8 @@ class FrontendIntegrationAPI:
                     api_provider = "openai"
                     api_model = None
                     
-                    # Ryan Lin uses custom finetuned OpenAI assistant
-                    if agent_id == "ryan_lin":
+                    # Ryan Lin (agent_1 or ryan_lin) uses custom finetuned OpenAI assistant
+                    if agent_id == "ryan_lin" or agent_id == "agent_1":
                         use_api_model = True
                         api_provider = "openai"
                         api_model = "asst_Z0iNwOpGtqooVPFMutWfz15G"

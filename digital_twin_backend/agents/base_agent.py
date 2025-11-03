@@ -20,7 +20,11 @@ try:
         GenerationConfig
     )
     ML_AVAILABLE = True
-except ImportError:
+except (ImportError, RuntimeError) as e:
+    # Handle both ImportError and RuntimeError (which can occur when scipy is broken)
+    if "scipy" in str(e).lower() or "lapack" in str(e).lower():
+        print(f"⚠️  ML libraries unavailable due to scipy/lapack issue: {e}")
+        print("💡 Using API models instead. To fix: pip install scipy in venv")
     torch = None
     AutoTokenizer = None
     AutoModelForCausalLM = None
