@@ -608,6 +608,7 @@ Known Team Members:
 2. khoinguyenpham04 (Noah/Pham Tran Khoi Nguyen) - Front End specialist, GitHub: @khoinguyenpham04
 3. ryanlin10 - Fine tuning models specialist, GitHub: @ryanlin10
 4. sul31man - Agentic to agentic specialist, GitHub: @sul31man
+5. salmanmkc - Augmented reality and artificial intelligence, GitHub: @salmanmkc
 
 Match these team members to the subtask based on their specialties. Use GitHub MCP ONLY if you need to verify activity levels.
 
